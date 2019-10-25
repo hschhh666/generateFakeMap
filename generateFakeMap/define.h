@@ -7,3 +7,4 @@
 #include "opencvHeader.h"
 #include "DataManager.h"
 #include "PedestrianSimulator.h"
+#include "inifile.h"

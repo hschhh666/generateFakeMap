@@ -6,9 +6,9 @@ PedestrianInfo::PedestrianInfo(Position cur, Position tar)
 	static std::mt19937 gen{ rd() };
 
 	std::normal_distribution<> px{ cur.x,sigma_px };
-	curPosition.x = px(gen);
+	lastPosition.x =  curPosition.x = px(gen);
 	std::normal_distribution<> py{ cur.y,sigma_py };
-	curPosition.y = py(gen);
+	lastPosition.y =  curPosition.y = py(gen);
 
 
 	std::normal_distribution<> tx{ tar.x,sigma_px };

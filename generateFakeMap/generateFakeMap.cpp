@@ -43,20 +43,31 @@ void MouseCallback1(int event, int x, int y, int flag, void * param)
 
 
 //主函数里定义每次迭代表示的物理时长、迭代次数、生成人的频率等
-int main()
+int main(int argc, char ** argv)
 {
-	std::random_device rd{};
-	std::mt19937 gen{ rd() };
-	double mu = 10;
-	double sigma = 2;
-	std::normal_distribution<> d{ mu,sigma };
-	std::uniform_real_distribution<> dis(1.0, 2.0);
-	double rand = d(gen);
-	double rand2 = dis(gen);
+	if (argc != 2) {
+		std::cout << "No config file, press any key to exit.\n";
+		getchar();
+		return(-2);
+	}
+	inifile::IniFile config;
+	if (!config.load(std::string(argv[1]))) {
+		printf("press any key to exit.\n");
+		getchar();
+		return (-3);
+	}
 
-	PedestrianSimulator pedestrianSim("D:/Research/IV2020MapPrediction/Code/MapPrediction/GenerateFakeMap/C++/EastGateScene.yml","D:/Research/IV2020MapPrediction/Code/MapPrediction/GenerateFakeMap/C++/EastMatrix1.yml","D:/Research/IV2020MapPrediction/Code/MapPrediction/GenerateFakeMap/C++/EastSouthGate.avi");
+	std::string sceneFile, pedestrianMatrix, video="";
+	int visualRate ;
+	config.getValue("param", "sceneFile", sceneFile);
+	config.getValue("param", "pedestrianMatrix", pedestrianMatrix);
+	config.getValue("param", "video", video);
+	config.getIntValue("param", "visualRate", visualRate);
 
-	pedestrianSim.DoSimulation(0.1, 180);
+
+	PedestrianSimulator pedestrianSim(sceneFile, pedestrianMatrix,  visualRate, video);//simulator的输入是场景结构、场景中人流频率与方向、是否可视化仿真过程以及方阵视频存储位置
+
+	pedestrianSim.DoSimulation(0.1, 1000);//仿真器主函数，第一个参数是每帧代表的时长（秒），第二个参数是总共仿真多少秒
 
 
 

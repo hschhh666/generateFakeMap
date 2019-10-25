@@ -155,11 +155,13 @@
   <ItemGroup>
     <ClCompile Include="DataManager.cpp" />
     <ClCompile Include="generateFakeMap.cpp" />
+    <ClCompile Include="inifile.cpp" />
     <ClCompile Include="PedestrianSimulator.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="DataManager.h" />
     <ClInclude Include="define.h" />
+    <ClInclude Include="inifile.h" />
     <ClInclude Include="opencvHeader.h" />
     <ClInclude Include="PedestrianSimulator.h" />
   </ItemGroup>

@@ -29,10 +29,12 @@ public:
 	PedestrianInfo(Position cur, Position tar);
 
 	Position curPosition;//当前位置
+	Position lastPosition;//上一时刻位置
 	Position tarPostion;//目标位置
 	Speed curSpeed;//当前速度
 	Acceleration curAcc;//当前加速度
 	double tarSpeed;//  m/s
+	std::list<Position> roadPoints;
 
 private:
 	

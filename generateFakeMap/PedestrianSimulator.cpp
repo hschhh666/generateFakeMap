@@ -252,6 +252,8 @@ void PedestrianSimulator::showCurState()
 	char word[200];
 	sprintf(word, "Simulation time = %.1f s", curTime);
 	int x, y;
+
+
 	for (auto p : pedestrians) {
 		if (sceneStructure.CoordinateConventer(p.curPosition.x, p.curPosition.y, x, y)) {
 			cv::circle(state, cv::Point(x, y), 2, cv::Scalar(255, 0, 0),-1);

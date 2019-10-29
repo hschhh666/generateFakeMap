@@ -58,16 +58,17 @@ int main(int argc, char ** argv)
 	}
 
 	std::string sceneFile, pedestrianMatrix, video="";
-	int visualRate ;
+	int visualRate ,simulationTime;
 	config.getValue("param", "sceneFile", sceneFile);
 	config.getValue("param", "pedestrianMatrix", pedestrianMatrix);
 	config.getValue("param", "video", video);
 	config.getIntValue("param", "visualRate", visualRate);
+	config.getIntValue("param", "simulationTime", simulationTime);
 
 
 	PedestrianSimulator pedestrianSim(sceneFile, pedestrianMatrix,  visualRate, video);//simulator的输入是场景结构、场景中人流频率与方向、是否可视化仿真过程以及方阵视频存储位置
 
-	pedestrianSim.DoSimulation(0.1, 1000);//仿真器主函数，第一个参数是每帧代表的时长（秒），第二个参数是总共仿真多少秒
+	pedestrianSim.DoSimulation(0.1, simulationTime);//仿真器主函数，第一个参数是每帧代表的时长（秒），第二个参数是总共仿真多少秒
 
 
 

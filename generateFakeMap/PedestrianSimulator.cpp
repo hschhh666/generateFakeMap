@@ -24,7 +24,7 @@ PedestrianSimulator::PedestrianSimulator(std::string sceneFile, std::string pede
 		}
 
 	//tmpMatrix = cv::Mat::zeros(cv::Size(pedestrianMatrix.cols, pedestrianMatrix.cols), CV_32F);
-	StateMap = cv::Mat::ones(cv::Size(sceneStructure.sceneState.rows, sceneStructure.sceneState.cols), CV_8UC1)*255;//初始化状态地图
+	StateMap = cv::Mat::zeros(cv::Size(sceneStructure.sceneState.rows, sceneStructure.sceneState.cols), CV_32FC(9));//初始化状态地图
 
 }
 
@@ -41,12 +41,11 @@ void PedestrianSimulator::DoSimulation(double delta_t, int timelong)
 		updateAcceleration();
 		showCurState();
 		updataStateMap();
-		std::cout << "frame : " << curFrame << std::endl;
+		std::cout << "frame : " << curFrame << "/"<<totalFrames<<std::endl;
 		curFrame++;
 	}
 
-	cv::imshow("stateMap", StateMap);
-	cv::waitKey(0);
+	showStateMap();
 
 	//for (int i = 0; i < tmpMatrix.rows; i++)
 	//{
@@ -117,6 +116,13 @@ void PedestrianSimulator::updatePositionAndVelocity()
 		p.lastPosition.x = p.curPosition.x;
 		p.lastPosition.y = p.curPosition.y;
 
+		double curSpeed = sqrt(pow(p.curSpeed.vx, 2) + pow(p.curSpeed.vy, 2));
+		if (curSpeed / p.tarSpeed > 1.3) {//限制速度上限为目标速度的1.3倍
+			p.curSpeed.vx *= (1.3*p.tarSpeed / curSpeed);
+			p.curSpeed.vy *= (1.3*p.tarSpeed / curSpeed);
+
+		}
+
 		p.curPosition.x += p.curSpeed.vx * deltaT;
 		p.curPosition.y += p.curSpeed.vy * deltaT;
 
@@ -150,8 +156,8 @@ void PedestrianSimulator::updateAcceleration()
 		Acceleration a2;//加速度第二项，即周围行人对当前行人的斥力
 		a2.ax = 0;
 		a2.ay = 0;
-		double Vab0 = 3;//这个参数论文里是2.1
-		double sigma = 0.8;//这个参数论文里是0.3
+		double Vab0 = 2.8;//这个参数论文里是2.1
+		double sigma = 0.5;//这个参数论文里是0.3
 		for (auto q : pedestrians) {
 
 			double disTwoPerson = (p.curPosition.x - q.curPosition.x)*(p.curPosition.x - q.curPosition.x) + (p.curPosition.y - q.curPosition.y)*(p.curPosition.y - q.curPosition.y);
@@ -214,7 +220,7 @@ void PedestrianSimulator::updateAcceleration()
 		double curAccPersonAndObst = sqrt(pow(a1.ax + a3.ax, 2) + pow(a1.ay + a3.ay, 2));//当前目的地引力与墙斥力向量和的大小，标量
 		double curAccPerson = sqrt(pow(a1.ax, 2) + pow(a1.ay, 2));//当前目的地对行人的引力大小，标量
 
-		if (curSpeed < p.tarSpeed*0.9 &&   curAccPersonAndObst< curAccPerson*0.8) {//如果行人速度低，且墙壁斥力抵消了大部分目的地引力
+		if (curSpeed < p.tarSpeed*2 &&   curAccPersonAndObst< curAccPerson*0.8) {//如果行人速度低，且墙壁斥力抵消了大部分目的地引力
 			double lenth = sqrt(pow(p.curSpeed.vx, 2) + pow(p.curSpeed.vy, 2));//
 			double curDirx = p.curSpeed.vx / lenth;//当前前进方向
 			double curDiry = p.curSpeed.vy / lenth;//当前前进方向，注意是单位向量
@@ -223,6 +229,7 @@ void PedestrianSimulator::updateAcceleration()
 			a1.ay -= horizonAcc   * curDiry;//先减掉目的地引力水平方向分量，现在目的地引力只有垂直于墙壁的分量了
 			a1.ax += curAccPerson * curDirx;
 			a1.ay += curAccPerson * curDiry;//现在，平行于墙壁的力的大小直接等于目的地引力大小了
+			a3.ax = a3.ay = 0;//老子不要墙壁的斥力了！
 		}
 
 		p.curAcc.ax = a1.ax + a2.ax + a3.ax;
@@ -233,15 +240,30 @@ void PedestrianSimulator::updateAcceleration()
 void PedestrianSimulator::updataStateMap()
 {
 	int ix, iy;
-	double x, y;
+	double cx, cy,lx,ly,dis,theta;
 	for (auto p : pedestrians) {
-		x = p.curPosition.x;
-		y = p.curPosition.y;
+		cx = p.curPosition.x;
+		cy = p.curPosition.y;
+		lx = p.lastPosition.x;
+		ly = p.lastPosition.y;
+		dis = sqrt(pow(cx - lx, 2) + pow(cy - ly, 2));
+		if (dis < 0) continue;
 
-		if (!sceneStructure.CoordinateConventer(x, y, ix, iy)) continue;
+		theta = acos((cx - lx) / dis);
+		theta = theta * 180 / CV_PI;
+		if (cy - ly < 0)
+			theta = 360 - theta;
+		theta += 22.5;
+		theta = theta - ((int)(theta / 360.0)) * 360;
+		int dir = theta / 45;
 
-		if (StateMap.at<uchar>(cv::Point(ix, iy))>1)
-			StateMap.at<uchar>(cv::Point(ix, iy)) -= 2;
+		if (sceneStructure.CoordinateConventer(cx, cy, ix, iy)) {
+			StateMap.at<cv::Vec<float, 9>>(cv::Point(ix, iy))[dir] ++;
+			StateMap.at<cv::Vec<float, 9>>(cv::Point(ix, iy))[8] ++;
+		}
+
+
+
 	}
 }
 
@@ -271,6 +293,77 @@ void PedestrianSimulator::showCurState()
 		video.write(state);
 
 	
+}
+
+void PedestrianSimulator::showStateMap()
+{
+	cv::Mat channels[9];
+	cv::split(StateMap, channels);
+
+	double maxValue, minValue;
+	cv::minMaxIdx(channels[8], &minValue, &maxValue);
+	for(int i=0;i<StateMap.rows;i++)
+		for (int j = 0; j < StateMap.cols; j++) {
+
+			for (int k = 0; k < 8; k++) {
+				if(channels[8].at<float>(i, j) >0.5)
+					channels[k].at<float>(i, j) = channels[k].at<float>(i, j) / channels[8].at<float>(i, j);
+			}
+			channels[8].at<float>(i, j) =channels[8].at<float>(i, j) / maxValue;
+			for (int k = 0; k < 8; k++) {
+				channels[k].at<float>(i, j) = channels[k].at<float>(i, j) *channels[8].at<float>(i, j);
+				channels[k].at<float>(i, j) = 1 - channels[k].at<float>(i, j);
+			}
+			channels[8].at<float>(i, j) = 1 - channels[8].at<float>(i, j);
+		}
+	std::string windowName[10] = { "To Right", "To UpRight", "To Up", "To UpLeft", "To Left", "To DownLeft", "To Down", "To DownRight","ToTal Count" };
+
+	double arrowLenth = 50;
+	double angel45 = 45 * CV_PI / 180;
+	for (int i = 0; i < 9; i++) {
+		//cv::putText(channels[i], windowName[i], cv::Point(20, 40),3 , 1, cv::Scalar(255),1);
+		double x1 = arrowLenth * 1.1;
+		double y1 = arrowLenth * 1.1;
+		double x2 = arrowLenth * cos(angel45*i);
+		double y2 = arrowLenth * sin(angel45*i);
+		x2 += x1;
+		y2 = y1 - y2;
+		if (i == 8) {
+			cv::putText(channels[i], windowName[i], cv::Point(20, 40), 3, 1, cv::Scalar(0), 1); continue;
+		}
+		cv::arrowedLine(channels[i], cv::Point(x1, y1), cv::Point(x2, y2), cv::Scalar(0), 2);
+	}
+
+	cv::Mat visualMap;
+	visualMap = cv::Mat::zeros(StateMap.rows * 3, StateMap.cols * 3, CV_32F);
+
+	cv::Mat ROI[9];
+
+	for (int i = 0; i < 3; i++)
+		for (int j = 0; j < 3; j++) {
+			ROI[i * 3 + j] = visualMap(cv::Rect(j*StateMap.cols, i*StateMap.rows, StateMap.cols, StateMap.rows));
+
+		}
+
+
+	channels[3].copyTo(ROI[0]); channels[2].copyTo(ROI[1]); channels[1].copyTo(ROI[2]);
+	channels[4].copyTo(ROI[3]); channels[8].copyTo(ROI[4]); channels[0].copyTo(ROI[5]);
+	channels[5].copyTo(ROI[6]); channels[6].copyTo(ROI[7]); channels[7].copyTo(ROI[8]);
+
+	int lineWidth = 5;
+	cv::Scalar color(0);
+	cv::line(visualMap, cv::Point(StateMap.cols, 0), cv::Point(StateMap.cols, StateMap.rows * 3), color, lineWidth);
+	cv::line(visualMap, cv::Point(2 * StateMap.cols, 0), cv::Point(2 * StateMap.cols, StateMap.rows * 3), color, lineWidth);
+	cv::line(visualMap, cv::Point(0, StateMap.rows), cv::Point(StateMap.cols * 3, StateMap.rows), color, lineWidth);
+	cv::line(visualMap, cv::Point(0, 2 * StateMap.rows), cv::Point(StateMap.cols * 3, 2 * StateMap.rows), color, lineWidth);
+
+	cv::resize(visualMap, visualMap, cv::Size(1200, 1200));
+
+	visualMap.convertTo(visualMap, CV_8U, 255);
+	cv::imshow("statemap", visualMap);
+	cv::waitKey(0);
+
+
 }
 
 

@@ -19,6 +19,7 @@ private:
 	void updateAcceleration();//更新行人的加速度
 	void updataStateMap();//更新状态地图
 	void showCurState();//可视化当前场景
+	void showStateMap();
 
 
 	int totalFrames;//总共仿真的帧数

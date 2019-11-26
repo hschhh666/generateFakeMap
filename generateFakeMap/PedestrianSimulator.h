@@ -7,7 +7,7 @@ class PedestrianSimulator
 {
 public:
 	//simulator的输入是场景结构、场景中人流频率与方向、是否可视化仿真过程以及方阵视频存储位置
-	PedestrianSimulator(std::string sceneFile, std::string pedestrianFile, int VisualRate = 0,std::string videoFile = "");
+	PedestrianSimulator(std::string sceneFile, std::string pedestrianFile, int VisualRate = 0,std::string videoFile = "", std::string outputFile = "");
 	void DoSimulation(double delta_t, int timelong);
 	~PedestrianSimulator();
 
@@ -20,6 +20,7 @@ private:
 	void updataStateMap();//更新状态地图
 	void showCurState();//可视化当前场景
 	void showStateMap();
+	void saveStateMap();
 
 
 	int totalFrames;//总共仿真的帧数
@@ -29,10 +30,12 @@ private:
 	SceneStructure sceneStructure;//当前场景
 	cv::Mat pedestrianMatrix;//人流密度矩阵
 	cv::Mat StateMap;//状态地图
-	//cv::Mat tmpMatrix;
+	cv::Mat tmpMatrix;
 	std::vector<PedestrianInfo> pedestrians;//行人们
 	int visualRate;//可视化速率，1为原速播放，2为2倍速播放，以此类推
 	cv::VideoWriter video;
+
+	std::string outputDir;
 
 	std::random_device rd{};
 	std::mt19937 gen{ rd() };

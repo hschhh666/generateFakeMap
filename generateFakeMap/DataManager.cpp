@@ -17,6 +17,7 @@ PedestrianInfo::PedestrianInfo(Position cur, Position tar)
 	tarPostion.y = ty(gen);
 
 	std::normal_distribution<> tarv{ 1.34,0.26 };//这个参数是从论文里抄的
+	//std::normal_distribution<> tarv{ 2.68,0.26 };
 	tarSpeed = tarv(gen);
 
 	curSpeed.vx = tarPostion.x - curPosition.x;
@@ -84,8 +85,11 @@ double SceneStructure::GetClosestObstacle(double px, double py, double & ox, dou
 
 	CoordinateConventer(px, py, ix, iy);
 
+	if (abs(ix) >= imgSize || abs(iy) >= imgSize)
+		return 0;//如果当前位置已经超出了地图范围，则认为已经在障碍物上了
+
 	double mindis = 99999999;
-	double range = 10;//meter
+	double range = 10;//meter，如果10米范围内都没有障碍物，则认为最近的障碍物在99999999米之外
 	int imageRange = range / pixelSize;
 	for(x = ix - imageRange;x<=ix+imageRange;x++)
 		for (y = iy - imageRange; y <= iy + imageRange; y++) {
@@ -103,6 +107,9 @@ double SceneStructure::GetClosestObstacle(double px, double py, double & ox, dou
 				oy = tmpy;
 			}
 		}
+	if (mindis < pixelSize)//如果距离障碍物的距离比地图分辨率还小，则认为已经在障碍物上了
+		mindis = 0;
+
 	return mindis;
 }
 

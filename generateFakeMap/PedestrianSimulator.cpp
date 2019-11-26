@@ -2,7 +2,7 @@
 
 
 
-PedestrianSimulator::PedestrianSimulator(std::string sceneFile, std::string pedestrianFile, int VisualRate, std::string videoFile)
+PedestrianSimulator::PedestrianSimulator(std::string sceneFile, std::string pedestrianFile, int VisualRate, std::string videoFile,std::string outputFile)
 {
 
 	visualRate = VisualRate;
@@ -23,9 +23,9 @@ PedestrianSimulator::PedestrianSimulator(std::string sceneFile, std::string pede
 			exit(-4);
 		}
 
-	//tmpMatrix = cv::Mat::zeros(cv::Size(pedestrianMatrix.cols, pedestrianMatrix.cols), CV_32F);
+	tmpMatrix = cv::Mat::zeros(cv::Size(pedestrianMatrix.cols, pedestrianMatrix.cols), CV_32F);
 	StateMap = cv::Mat::zeros(cv::Size(sceneStructure.sceneState.rows, sceneStructure.sceneState.cols), CV_32FC(9));//初始化状态地图
-
+	outputDir = outputFile;
 }
 
 void PedestrianSimulator::DoSimulation(double delta_t, int timelong)
@@ -41,12 +41,15 @@ void PedestrianSimulator::DoSimulation(double delta_t, int timelong)
 		updateAcceleration();
 		showCurState();
 		updataStateMap();
-		std::cout << "frame : " << curFrame << "/"<<totalFrames<<std::endl;
+		if (curFrame%200 == 0)
+			std::cout << "frame : " << curFrame << "/"<<totalFrames<<std::endl;
 		curFrame++;
 	}
 
-	showStateMap();
-
+	if (outputDir == "")
+		showStateMap();
+	else
+		saveStateMap();
 	//for (int i = 0; i < tmpMatrix.rows; i++)
 	//{
 	//	for (int j = 0; j < tmpMatrix.cols; j++)
@@ -80,17 +83,22 @@ void PedestrianSimulator::generatePedestrian()
 			prob = (deltaT / 60)*value;
 			if (prob*10 < uniform(gen)) continue;//按照一定概率生成行人
 
-			//tmpMatrix.at<float>(i, j)++;
+			tmpMatrix.at<float>(i, j)++;
 
-			double tmp1, tmp2, dis;
+			double tmp1, tmp2, dis1,dis2;
 			do {
 				PedestrianInfo onePedestrian(sceneStructure.StartEndPositions[i], sceneStructure.StartEndPositions[j]);
-				dis = sceneStructure.GetClosestObstacle(onePedestrian.curPosition.x, onePedestrian.curPosition.y, tmp1, tmp2);//行人不能出生在障碍物上
-				if(dis>=0.1)
+				dis1 = sceneStructure.GetClosestObstacle(onePedestrian.curPosition.x, onePedestrian.curPosition.y, tmp1, tmp2);//行人不能出生在障碍物上
+				dis2 = sceneStructure.GetClosestObstacle(onePedestrian.tarPostion.x, onePedestrian.tarPostion.y, tmp1, tmp2);//目的地不可以在障碍物上
+				if(dis1>=0.1 && dis2 >=0.1)
 					pedestrians.push_back(onePedestrian);
 
-			} while (dis<0.1);
+			} while (dis1<0.1 || dis2<0.1);
+
+
+
 		}
+
 }
 
 void PedestrianSimulator::pathPlanning()
@@ -101,14 +109,18 @@ void PedestrianSimulator::updatePositionAndVelocity()
 {
 
 	for (int i = 0; i < pedestrians.size(); i++) {//判断行人有没有到达终点，如果到达，则删除
-		double dis = (pedestrians[i].curPosition.x - pedestrians[i].tarPostion.x)*(pedestrians[i].curPosition.x - pedestrians[i].tarPostion.x)
+		double dis1 = (pedestrians[i].curPosition.x - pedestrians[i].tarPostion.x)*(pedestrians[i].curPosition.x - pedestrians[i].tarPostion.x)
 			+ (pedestrians[i].curPosition.y - pedestrians[i].tarPostion.y)*(pedestrians[i].curPosition.y - pedestrians[i].tarPostion.y);
-		dis = sqrt(dis);
-		if (dis < 1)
+		dis1 = sqrt(dis1);
+		double tmp1, tmp2;
+		double dis2 = sceneStructure.GetClosestObstacle(pedestrians[i].curPosition.x, pedestrians[i].curPosition.y, tmp1, tmp2);
+		if (dis1 < 1 || fabs(dis2) < 0.1)//如果行人走着走着走到障碍物上了，那就删掉他！
+		//if(dis1 < 1)
 		{
 			pedestrians.erase(pedestrians.begin() + i);
 			i--;
 		}
+		
 	}
 
 	//更新行人的位置和速度
@@ -197,7 +209,7 @@ void PedestrianSimulator::updateAcceleration()
 		a3.ax = 0;
 		a3.ay = 0;
 		double UaB0 = 10;//这个参数论文里是10m
-		double R = 0.6;//这个参数论文里是0.2m
+		double R = 0.6;//这个参数论文里是0.2m，我之前用的是0.6
 		double ox, oy,dis;
 		dis = sceneStructure.GetClosestObstacle(p.curPosition.x, p.curPosition.y, ox, oy);
 		if (dis < 10) {
@@ -229,7 +241,7 @@ void PedestrianSimulator::updateAcceleration()
 			a1.ay -= horizonAcc   * curDiry;//先减掉目的地引力水平方向分量，现在目的地引力只有垂直于墙壁的分量了
 			a1.ax += curAccPerson * curDirx;
 			a1.ay += curAccPerson * curDiry;//现在，平行于墙壁的力的大小直接等于目的地引力大小了
-			a3.ax = a3.ay = 0;//老子不要墙壁的斥力了！
+			//a3.ax = a3.ay = 0;//老子不要墙壁的斥力了！
 		}
 
 		p.curAcc.ax = a1.ax + a2.ax + a3.ax;
@@ -247,7 +259,7 @@ void PedestrianSimulator::updataStateMap()
 		lx = p.lastPosition.x;
 		ly = p.lastPosition.y;
 		dis = sqrt(pow(cx - lx, 2) + pow(cy - ly, 2));
-		if (dis < 0) continue;
+		if (dis < 0.01) continue;
 
 		theta = acos((cx - lx) / dis);
 		theta = theta * 180 / CV_PI;
@@ -363,6 +375,37 @@ void PedestrianSimulator::showStateMap()
 	cv::imshow("statemap", visualMap);
 	cv::waitKey(0);
 
+
+}
+
+void PedestrianSimulator::saveStateMap()
+{
+	cv::Mat channels[9];
+	cv::split(StateMap, channels);
+	cv::FileStorage storage(outputDir + ".yml", cv::FileStorage::WRITE);
+
+	storage << "simulationTime" << timeLong;
+	storage << "originPedestrianMatrix" << pedestrianMatrix;
+	storage << "generatedPedestrianMatrix" << tmpMatrix * 60 / timeLong;
+
+	storage << "stateMap" << channels[8];
+	storage.release();
+	printf("Write state map to %s\n", outputDir + ".yml");
+
+
+
+	double maxValue, minValue;
+	cv::minMaxIdx(channels[8], &minValue, &maxValue);
+	for (int i = 0; i < StateMap.rows; i++)
+		for (int j = 0; j < StateMap.cols; j++) {
+			channels[8].at<float>(i, j) = channels[8].at<float>(i, j) / maxValue;
+			channels[8].at<float>(i, j) = (1 - channels[8].at<float>(i, j))*255;
+		}
+	//cv::imshow("test", channels[8]);
+	//cv::waitKey(0);
+	cv::imwrite(outputDir + ".jpg", channels[8]);
+	printf("Write state map to %s\n", outputDir + ".jpg");
+	
 
 }
 

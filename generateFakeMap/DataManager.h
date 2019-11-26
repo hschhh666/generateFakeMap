@@ -38,8 +38,8 @@ public:
 
 private:
 	
-	double sigma_px = 1;
-	double sigma_py = 1;
+	double sigma_px = 3;
+	double sigma_py = 3;
 
 };
 

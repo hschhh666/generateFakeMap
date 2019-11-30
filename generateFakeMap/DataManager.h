@@ -30,6 +30,7 @@ public:
 
 	Position curPosition;//当前位置
 	Position lastPosition;//上一时刻位置
+	Position initPosition;//初始时刻位置
 	Position tarPostion;//目标位置
 	Speed curSpeed;//当前速度
 	Acceleration curAcc;//当前加速度
@@ -38,8 +39,8 @@ public:
 
 private:
 	
-	double sigma_px = 3;
-	double sigma_py = 3;
+	double sigma_px = 1.5;
+	double sigma_py = 1.5;
 
 };
 
@@ -63,7 +64,7 @@ public:
 
 	std::vector<Position> StartEndPositions;//meter 保存着所有的目标点
 	
-private:
+//private:
 	int imgSize;//pixel 地图的像素大小
 	double sceneSize;//meter 地图对应的实际物理环境大小
 	double pixelSize;//meter 每个像素对应的实际物理尺寸

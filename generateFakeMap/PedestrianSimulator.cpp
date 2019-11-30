@@ -14,6 +14,7 @@ PedestrianSimulator::PedestrianSimulator(std::string sceneFile, std::string pede
 		for (int j = 0; j < pedestrianMatrix.cols; j++) {
 			std::cout << pedestrianMatrix.at<double>(i, j) << " ";//读取人流密度矩阵
 		}
+
 		std::cout << std::endl;
 	}
 	
@@ -26,6 +27,25 @@ PedestrianSimulator::PedestrianSimulator(std::string sceneFile, std::string pede
 	tmpMatrix = cv::Mat::zeros(cv::Size(pedestrianMatrix.cols, pedestrianMatrix.cols), CV_32F);
 	StateMap = cv::Mat::zeros(cv::Size(sceneStructure.sceneState.rows, sceneStructure.sceneState.cols), CV_32FC(9));//初始化状态地图
 	outputDir = outputFile;
+	
+	double kernelSize = 1;//计算以人为中心，kernelSize米范围内
+	double pixelSize = sceneStructure.pixelSize;
+	int kernelPixelSize = 2*(kernelSize / pixelSize) + 1;
+	double theta = 0.4;//高斯核的衰减半径，theta时衰减到0.6
+	
+	stateMapKernal = cv::Mat::zeros(cv::Size(kernelPixelSize, kernelPixelSize), CV_32F);
+	for (int i = 0;i< kernelPixelSize;i++)
+	{ 
+		for (int j = 0; j < kernelPixelSize; j++) {
+			int x = j - (int)(kernelPixelSize / 2);
+			int y = (int)(kernelPixelSize / 2) - i;
+			float dis = sqrt((double)(x * x + y * y));
+			dis = dis * pixelSize;
+			float value = exp(-dis * dis/(2*theta*theta));
+			stateMapKernal.at<float>(i, j) = value;
+		}
+
+	}
 }
 
 void PedestrianSimulator::DoSimulation(double delta_t, int timelong)
@@ -90,6 +110,7 @@ void PedestrianSimulator::generatePedestrian()
 				PedestrianInfo onePedestrian(sceneStructure.StartEndPositions[i], sceneStructure.StartEndPositions[j]);
 				dis1 = sceneStructure.GetClosestObstacle(onePedestrian.curPosition.x, onePedestrian.curPosition.y, tmp1, tmp2);//行人不能出生在障碍物上
 				dis2 = sceneStructure.GetClosestObstacle(onePedestrian.tarPostion.x, onePedestrian.tarPostion.y, tmp1, tmp2);//目的地不可以在障碍物上
+				
 				if(dis1>=0.1 && dis2 >=0.1)
 					pedestrians.push_back(onePedestrian);
 
@@ -268,10 +289,26 @@ void PedestrianSimulator::updataStateMap()
 		theta += 22.5;
 		theta = theta - ((int)(theta / 360.0)) * 360;
 		int dir = theta / 45;
+		
+		//为了省事，stateMap的channel 0 用来记做向右走的人，channel 1 记向左走的人， channel 8 记总人数。即channel 0 + channel 1 = channel8。也就是说，剩下的channel暂时没用
+		if (p.tarPostion.x > p.initPosition.x)//向右走
+			dir = 0;
+		else
+			dir = 1;
 
+		int kernelPixelSize = stateMapKernal.cols;
 		if (sceneStructure.CoordinateConventer(cx, cy, ix, iy)) {
-			StateMap.at<cv::Vec<float, 9>>(cv::Point(ix, iy))[dir] ++;
-			StateMap.at<cv::Vec<float, 9>>(cv::Point(ix, iy))[8] ++;
+
+			for (int i = 0;i<kernelPixelSize;i++)
+				for (int j = 0; j < kernelPixelSize; j++) {
+					float value = stateMapKernal.at<float>(i, j);
+					int tmp_y = i - (kernelPixelSize / 2);
+					int tmp_x = j - (kernelPixelSize / 2);
+					if (ix + tmp_x >= sceneStructure.imgSize || ix + tmp_x < 0 || iy + tmp_y >= sceneStructure.imgSize || iy + tmp_y < 0)
+						continue;
+					StateMap.at<cv::Vec<float, 9>>(cv::Point(ix + tmp_x, iy + tmp_y))[8] += value;//以人为中心，做高斯衰减
+					StateMap.at<cv::Vec<float, 9>>(cv::Point(ix + tmp_x, iy + tmp_y))[dir] += value;
+				}
 		}
 
 
@@ -389,17 +426,57 @@ void PedestrianSimulator::saveStateMap()
 	storage << "generatedPedestrianMatrix" << tmpMatrix * 60 / timeLong;
 
 	storage << "stateMap" << channels[8];
+	storage << "toRight"  << channels[0];
+	storage << "toLeft"   << channels[1];
+
 	storage.release();
 	printf("Write state map to %s\n", outputDir + ".yml");
 
+	double maxL3 = 0;
 
+	cv::Mat colorStateMap = cv::Mat::zeros(StateMap.rows, StateMap.cols, CV_8UC3);//该mat保存的是彩色状态图
+	for (int i = 0;i<StateMap.rows;i++)
+		for (int j = 0; j < StateMap.cols; j++) {
+			float L1 = StateMap.at<cv::Vec<float, 9>>(i, j)[0];//该栅格中向右走的人数
+			float L2 =  StateMap.at<cv::Vec<float, 9>>(i, j)[1];//该栅格中向左走的人数
+			float theta1 = 0;//向右走为红色
+			float theta2  = (170/255.0)*180.0;//向左走为蓝色。在windows定义的HSL色彩模式中，h=170是蓝色。windows定义的hsl中h的范围是[0,255]，opencv定义的hls中h的范围是[0,180]，这里做了一个从windows到opencv色彩定义的转换
+			theta1 = theta1 * CV_PI / 180;
+			theta2 = theta2 * CV_PI / 180;
+			float L3 = sqrt(L1 * L1 + L2 * L2 + 2 * L1 * L2 * cos(theta1 - theta2));//这一步计算的是中间变量
+			if (L3 < 1e-3) {
+				colorStateMap.at<cv::Vec3b>(i, j)[0] = 0;
+				colorStateMap.at<cv::Vec3b>(i, j)[1] = 255;
+				colorStateMap.at<cv::Vec3b>(i, j)[2] = 0;
+				continue;
+			}
+			float theta3 = acos((L1*cos(theta1) + L2 * cos(theta2)) / L3);//使用opencv的hls颜色模式为行人方向赋值，其中令饱和度都为255。定义向右走为红色，向左走为蓝色，颜色的亮度由人数决定，人越多亮度越接近128，人越少亮度越接近255。人流交汇处的颜色由红色/蓝色混合而成，其色调（向量方向）等于两股人流对应颜色的向量和的方向，亮度等于两股人流的亮度之和
+			theta3 = theta3 * 180 / CV_PI;//计算该栅格的颜色，对应opencv中hls颜色模式的h（色调）
+			L3 = L1 + L2;//计算该栅格的亮度，对应opencv中hls颜色模式的l（亮度）。人越多亮度越接近128，人越少亮度越接近255
+			
+			if (L3 > maxL3)
+				maxL3 = L3;
+
+			L3 = L3 > 128 ? 128 : L3;//亮度为255时对应白色了，亮度为0时对应黑色了，亮度为128时是由白变黑的中间点
+			colorStateMap.at<cv::Vec3b>(i, j)[0] = theta3;
+			colorStateMap.at<cv::Vec3b>(i, j)[1] = 255 - L3;
+			colorStateMap.at<cv::Vec3b>(i, j)[2] = 255;//饱和度都为255
+		}
+	printf("Max people = %.2lf\n", maxL3);
+	
+	cv::cvtColor(colorStateMap, colorStateMap, cv::COLOR_HLS2BGR);
+	cv::imwrite(outputDir + "_color.jpg", colorStateMap);
 
 	double maxValue, minValue;
 	cv::minMaxIdx(channels[8], &minValue, &maxValue);
 	for (int i = 0; i < StateMap.rows; i++)
 		for (int j = 0; j < StateMap.cols; j++) {
-			channels[8].at<float>(i, j) = channels[8].at<float>(i, j) / maxValue;
-			channels[8].at<float>(i, j) = (1 - channels[8].at<float>(i, j))*255;
+			//channels[8].at<float>(i, j) = channels[8].at<float>(i, j) / maxValue;
+			//channels[8].at<float>(i, j) = (1 - channels[8].at<float>(i, j))*255;
+			if (channels[8].at<float>(i, j) > 255)
+				channels[8].at<float>(i, j) = 255;
+			channels[8].at<float>(i, j) = 255 - channels[8].at<float>(i, j);
+
 		}
 	//cv::imshow("test", channels[8]);
 	//cv::waitKey(0);

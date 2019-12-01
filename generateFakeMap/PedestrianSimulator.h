@@ -1,38 +1,38 @@
-#pragma once
+ï»¿#pragma once
 #include "DataManager.h"
 
 
-//ÊäÈë£º³¡¾°½á¹¹¡¢ĞĞÈË¡¢ĞĞÈËÉú³ÉÆµÂÊ¡¢Ã¿´Îµü´ú±íÊ¾µÄÎïÀíÊ±³¤
+//è¾“å…¥ï¼šåœºæ™¯ç»“æ„ã€è¡Œäººã€è¡Œäººç”Ÿæˆé¢‘ç‡ã€æ¯æ¬¡è¿­ä»£è¡¨ç¤ºçš„ç‰©ç†æ—¶é•¿
 class PedestrianSimulator
 {
 public:
-	//simulatorµÄÊäÈëÊÇ³¡¾°½á¹¹¡¢³¡¾°ÖĞÈËÁ÷ÆµÂÊÓë·½Ïò¡¢ÊÇ·ñ¿ÉÊÓ»¯·ÂÕæ¹ı³ÌÒÔ¼°·½ÕóÊÓÆµ´æ´¢Î»ÖÃ
+	//simulatorçš„è¾“å…¥æ˜¯åœºæ™¯ç»“æ„ã€åœºæ™¯ä¸­äººæµé¢‘ç‡ä¸æ–¹å‘ã€æ˜¯å¦å¯è§†åŒ–ä»¿çœŸè¿‡ç¨‹ä»¥åŠæ–¹é˜µè§†é¢‘å­˜å‚¨ä½ç½®
 	PedestrianSimulator(std::string sceneFile, std::string pedestrianFile, int VisualRate = 0,std::string videoFile = "", std::string outputFile = "");
 	void DoSimulation(double delta_t, int timelong);
 	~PedestrianSimulator();
 
 private:
 	
-	void generatePedestrian();//¸ù¾İÈËÁ÷ÃÜ¶È¾ØÕó£¬Ã¿Ö¡Ëæ»úÉú³ÉĞĞÈË¡£
-	void pathPlanning();//ĞĞÈËÂ·¾¶¹æ»®
-	void updatePositionAndVelocity();//¸üĞÂĞĞÈËµÄÎ»ÖÃÓëËÙ¶È£¬²¢ÅĞ¶ÏĞĞÈËÊÇ·ñÒÑ¾­µ½´ïÄ¿µÄµØ
-	void updateAcceleration();//¸üĞÂĞĞÈËµÄ¼ÓËÙ¶È
-	void updataStateMap();//¸üĞÂ×´Ì¬µØÍ¼
-	void showCurState();//¿ÉÊÓ»¯µ±Ç°³¡¾°
+	void generatePedestrian();//æ ¹æ®äººæµå¯†åº¦çŸ©é˜µï¼Œæ¯å¸§éšæœºç”Ÿæˆè¡Œäººã€‚
+	void pathPlanning();//è¡Œäººè·¯å¾„è§„åˆ’
+	void updatePositionAndVelocity();//æ›´æ–°è¡Œäººçš„ä½ç½®ä¸é€Ÿåº¦ï¼Œå¹¶åˆ¤æ–­è¡Œäººæ˜¯å¦å·²ç»åˆ°è¾¾ç›®çš„åœ°
+	void updateAcceleration();//æ›´æ–°è¡Œäººçš„åŠ é€Ÿåº¦
+	void updataStateMap();//æ›´æ–°çŠ¶æ€åœ°å›¾
+	void showCurState();//å¯è§†åŒ–å½“å‰åœºæ™¯
 	void showStateMap();
 	void saveStateMap();
 
 
-	int totalFrames;//×Ü¹²·ÂÕæµÄÖ¡Êı
-	int timeLong;//×Ü¹²·ÂÕæµÄÊ±³¤
-	double deltaT;//Ã¿Ö¡´ú±íµÄÊ±¼ä µ¥Î» Ãë
-	int curFrame;//µ±Ç°·ÂÕæµ½µÚ¼¸Ö¡ÁË
-	SceneStructure sceneStructure;//µ±Ç°³¡¾°
-	cv::Mat pedestrianMatrix;//ÈËÁ÷ÃÜ¶È¾ØÕó
-	cv::Mat StateMap;//×´Ì¬µØÍ¼
+	int totalFrames;//æ€»å…±ä»¿çœŸçš„å¸§æ•°
+	int timeLong;//æ€»å…±ä»¿çœŸçš„æ—¶é•¿
+	double deltaT;//æ¯å¸§ä»£è¡¨çš„æ—¶é—´ å•ä½ ç§’
+	int curFrame;//å½“å‰ä»¿çœŸåˆ°ç¬¬å‡ å¸§äº†
+	SceneStructure sceneStructure;//å½“å‰åœºæ™¯
+	cv::Mat pedestrianMatrix;//äººæµå¯†åº¦çŸ©é˜µ
+	cv::Mat StateMap;//çŠ¶æ€åœ°å›¾
 	cv::Mat tmpMatrix;
-	std::vector<PedestrianInfo> pedestrians;//ĞĞÈËÃÇ
-	int visualRate;//¿ÉÊÓ»¯ËÙÂÊ£¬1ÎªÔ­ËÙ²¥·Å£¬2Îª2±¶ËÙ²¥·Å£¬ÒÔ´ËÀàÍÆ
+	std::vector<PedestrianInfo> pedestrians;//è¡Œäººä»¬
+	int visualRate;//å¯è§†åŒ–é€Ÿç‡ï¼Œ1ä¸ºåŸé€Ÿæ’­æ”¾ï¼Œ2ä¸º2å€é€Ÿæ’­æ”¾ï¼Œä»¥æ­¤ç±»æ¨
 	cv::VideoWriter video;
 
 	std::string outputDir;

@@ -1,4 +1,4 @@
-#include "PedestrianSimulator.h"
+ï»¿#include "PedestrianSimulator.h"
 
 
 
@@ -8,11 +8,11 @@ PedestrianSimulator::PedestrianSimulator(std::string sceneFile, std::string pede
 	visualRate = VisualRate;
 	sceneStructure.InitScene(sceneFile);
 	cv::FileStorage storage(pedestrianFile, cv::FileStorage::READ);
-	storage["matrix"] >> pedestrianMatrix;//¶ÁÈ¡³¡¾°½á¹¹
+	storage["matrix"] >> pedestrianMatrix;//è¯»å–åœºæ™¯ç»“æ„
 	for (int i = 0; i < pedestrianMatrix.rows; i++)
 	{
 		for (int j = 0; j < pedestrianMatrix.cols; j++) {
-			std::cout << pedestrianMatrix.at<double>(i, j) << " ";//¶ÁÈ¡ÈËÁ÷ÃÜ¶È¾ØÕó
+			std::cout << pedestrianMatrix.at<double>(i, j) << " ";//è¯»å–äººæµå¯†åº¦çŸ©é˜µ
 		}
 
 		std::cout << std::endl;
@@ -25,13 +25,13 @@ PedestrianSimulator::PedestrianSimulator(std::string sceneFile, std::string pede
 		}
 
 	tmpMatrix = cv::Mat::zeros(cv::Size(pedestrianMatrix.cols, pedestrianMatrix.cols), CV_32F);
-	StateMap = cv::Mat::zeros(cv::Size(sceneStructure.sceneState.rows, sceneStructure.sceneState.cols), CV_32FC(9));//³õÊ¼»¯×´Ì¬µØÍ¼
+	StateMap = cv::Mat::zeros(cv::Size(sceneStructure.sceneState.rows, sceneStructure.sceneState.cols), CV_32FC(9));//åˆå§‹åŒ–çŠ¶æ€åœ°å›¾
 	outputDir = outputFile;
 	
-	double kernelSize = 1;//¼ÆËãÒÔÈËÎªÖĞĞÄ£¬kernelSizeÃ×·¶Î§ÄÚ
+	double kernelSize = 1;//è®¡ç®—ä»¥äººä¸ºä¸­å¿ƒï¼ŒkernelSizeç±³èŒƒå›´å†…
 	double pixelSize = sceneStructure.pixelSize;
 	int kernelPixelSize = 2*(kernelSize / pixelSize) + 1;
-	double theta = 0.4;//¸ßË¹ºËµÄË¥¼õ°ë¾¶£¬thetaÊ±Ë¥¼õµ½0.6
+	double theta = 0.4;//é«˜æ–¯æ ¸çš„è¡°å‡åŠå¾„ï¼Œthetaæ—¶è¡°å‡åˆ°0.6
 	
 	stateMapKernal = cv::Mat::zeros(cv::Size(kernelPixelSize, kernelPixelSize), CV_32F);
 	for (int i = 0;i< kernelPixelSize;i++)
@@ -101,15 +101,15 @@ void PedestrianSimulator::generatePedestrian()
 			value = pedestrianMatrix.at<double>(i, j);
 
 			prob = (deltaT / 60)*value;
-			if (prob*10 < uniform(gen)) continue;//°´ÕÕÒ»¶¨¸ÅÂÊÉú³ÉĞĞÈË
+			if (prob*10 < uniform(gen)) continue;//æŒ‰ç…§ä¸€å®šæ¦‚ç‡ç”Ÿæˆè¡Œäºº
 
 			tmpMatrix.at<float>(i, j)++;
 
 			double tmp1, tmp2, dis1,dis2;
 			do {
 				PedestrianInfo onePedestrian(sceneStructure.StartEndPositions[i], sceneStructure.StartEndPositions[j]);
-				dis1 = sceneStructure.GetClosestObstacle(onePedestrian.curPosition.x, onePedestrian.curPosition.y, tmp1, tmp2);//ĞĞÈË²»ÄÜ³öÉúÔÚÕÏ°­ÎïÉÏ
-				dis2 = sceneStructure.GetClosestObstacle(onePedestrian.tarPostion.x, onePedestrian.tarPostion.y, tmp1, tmp2);//Ä¿µÄµØ²»¿ÉÒÔÔÚÕÏ°­ÎïÉÏ
+				dis1 = sceneStructure.GetClosestObstacle(onePedestrian.curPosition.x, onePedestrian.curPosition.y, tmp1, tmp2);//è¡Œäººä¸èƒ½å‡ºç”Ÿåœ¨éšœç¢ç‰©ä¸Š
+				dis2 = sceneStructure.GetClosestObstacle(onePedestrian.tarPostion.x, onePedestrian.tarPostion.y, tmp1, tmp2);//ç›®çš„åœ°ä¸å¯ä»¥åœ¨éšœç¢ç‰©ä¸Š
 				
 				if(dis1>=0.1 && dis2 >=0.1)
 					pedestrians.push_back(onePedestrian);
@@ -129,13 +129,13 @@ void PedestrianSimulator::pathPlanning()
 void PedestrianSimulator::updatePositionAndVelocity()
 {
 
-	for (int i = 0; i < pedestrians.size(); i++) {//ÅĞ¶ÏĞĞÈËÓĞÃ»ÓĞµ½´ïÖÕµã£¬Èç¹ûµ½´ï£¬ÔòÉ¾³ı
+	for (int i = 0; i < pedestrians.size(); i++) {//åˆ¤æ–­è¡Œäººæœ‰æ²¡æœ‰åˆ°è¾¾ç»ˆç‚¹ï¼Œå¦‚æœåˆ°è¾¾ï¼Œåˆ™åˆ é™¤
 		double dis1 = (pedestrians[i].curPosition.x - pedestrians[i].tarPostion.x)*(pedestrians[i].curPosition.x - pedestrians[i].tarPostion.x)
 			+ (pedestrians[i].curPosition.y - pedestrians[i].tarPostion.y)*(pedestrians[i].curPosition.y - pedestrians[i].tarPostion.y);
 		dis1 = sqrt(dis1);
 		double tmp1, tmp2;
 		double dis2 = sceneStructure.GetClosestObstacle(pedestrians[i].curPosition.x, pedestrians[i].curPosition.y, tmp1, tmp2);
-		if (dis1 < 1 || fabs(dis2) < 0.1)//Èç¹ûĞĞÈË×ß×Å×ß×Å×ßµ½ÕÏ°­ÎïÉÏÁË£¬ÄÇ¾ÍÉ¾µôËû£¡
+		if (dis1 < 1 || fabs(dis2) < 0.1)//å¦‚æœè¡Œäººèµ°ç€èµ°ç€èµ°åˆ°éšœç¢ç‰©ä¸Šäº†ï¼Œé‚£å°±åˆ æ‰ä»–ï¼
 		//if(dis1 < 1)
 		{
 			pedestrians.erase(pedestrians.begin() + i);
@@ -144,13 +144,13 @@ void PedestrianSimulator::updatePositionAndVelocity()
 		
 	}
 
-	//¸üĞÂĞĞÈËµÄÎ»ÖÃºÍËÙ¶È
+	//æ›´æ–°è¡Œäººçš„ä½ç½®å’Œé€Ÿåº¦
 	for (auto &p : pedestrians) {
 		p.lastPosition.x = p.curPosition.x;
 		p.lastPosition.y = p.curPosition.y;
 
 		double curSpeed = sqrt(pow(p.curSpeed.vx, 2) + pow(p.curSpeed.vy, 2));
-		if (curSpeed / p.tarSpeed > 1.3) {//ÏŞÖÆËÙ¶ÈÉÏÏŞÎªÄ¿±êËÙ¶ÈµÄ1.3±¶
+		if (curSpeed / p.tarSpeed > 1.3) {//é™åˆ¶é€Ÿåº¦ä¸Šé™ä¸ºç›®æ ‡é€Ÿåº¦çš„1.3å€
 			p.curSpeed.vx *= (1.3*p.tarSpeed / curSpeed);
 			p.curSpeed.vy *= (1.3*p.tarSpeed / curSpeed);
 
@@ -169,7 +169,7 @@ void PedestrianSimulator::updatePositionAndVelocity()
 void PedestrianSimulator::updateAcceleration()
 {
 
-	//¸üĞÂĞĞÈËµÄ¼ÓËÙ¶È
+	//æ›´æ–°è¡Œäººçš„åŠ é€Ÿåº¦
 	for (auto &p : pedestrians) {
 		Speed targetSpeed;
 		targetSpeed.vx = p.tarPostion.x - p.curPosition.x;
@@ -180,17 +180,17 @@ void PedestrianSimulator::updateAcceleration()
 		targetSpeed.vx *= p.tarSpeed;
 		targetSpeed.vy *= p.tarSpeed;
 
-		Acceleration a1;//¼ÓËÙ¶ÈÖĞµÄµÚÒ»Ïî£¬¼´Ä¿µÄµØÔì³ÉµÄ¼ÓËÙ¶È
+		Acceleration a1;//åŠ é€Ÿåº¦ä¸­çš„ç¬¬ä¸€é¡¹ï¼Œå³ç›®çš„åœ°é€ æˆçš„åŠ é€Ÿåº¦
 		a1.ax = (targetSpeed.vx - p.curSpeed.vx) / 1;
 		a1.ay = (targetSpeed.vy - p.curSpeed.vy) / 1;
 
 
 
-		Acceleration a2;//¼ÓËÙ¶ÈµÚ¶şÏî£¬¼´ÖÜÎ§ĞĞÈË¶Ôµ±Ç°ĞĞÈËµÄ³âÁ¦
+		Acceleration a2;//åŠ é€Ÿåº¦ç¬¬äºŒé¡¹ï¼Œå³å‘¨å›´è¡Œäººå¯¹å½“å‰è¡Œäººçš„æ–¥åŠ›
 		a2.ax = 0;
 		a2.ay = 0;
-		double Vab0 = 2.8;//Õâ¸ö²ÎÊıÂÛÎÄÀïÊÇ2.1
-		double sigma = 0.5;//Õâ¸ö²ÎÊıÂÛÎÄÀïÊÇ0.3
+		double Vab0 = 2.8;//è¿™ä¸ªå‚æ•°è®ºæ–‡é‡Œæ˜¯2.1
+		double sigma = 0.5;//è¿™ä¸ªå‚æ•°è®ºæ–‡é‡Œæ˜¯0.3
 		for (auto q : pedestrians) {
 
 			double disTwoPerson = (p.curPosition.x - q.curPosition.x)*(p.curPosition.x - q.curPosition.x) + (p.curPosition.y - q.curPosition.y)*(p.curPosition.y - q.curPosition.y);
@@ -214,10 +214,10 @@ void PedestrianSimulator::updateAcceleration()
 			dir_y /= lenth;
 
 			double coefficient = 1;
-			double cosTheta = p.curSpeed.vx * (q.curPosition.x - p.curPosition.x) + p.curSpeed.vy *(q.curPosition.y - p.curPosition.y);//¼ÆËã±ğÈËÊÇ²»ÊÇÔÚÎÒµÄÊÓÒ°·¶Î§ÄÚ
+			double cosTheta = p.curSpeed.vx * (q.curPosition.x - p.curPosition.x) + p.curSpeed.vy *(q.curPosition.y - p.curPosition.y);//è®¡ç®—åˆ«äººæ˜¯ä¸æ˜¯åœ¨æˆ‘çš„è§†é‡èŒƒå›´å†…
 			cosTheta /= (sqrt(p.curSpeed.vx*p.curSpeed.vx + p.curSpeed.vy*p.curSpeed.vy) * disTwoPerson);
 			double Theta = acos(cosTheta) * 180 / CV_PI;
-			if (Theta > 100)//¶ÔÓÚÎÒÊÓÒ°·¶Î§ÄÚ100*2¶ÈÖ®ÍâµÄÈË£¬ÊÓ¶ø²»¼û
+			if (Theta > 100)//å¯¹äºæˆ‘è§†é‡èŒƒå›´å†…100*2åº¦ä¹‹å¤–çš„äººï¼Œè§†è€Œä¸è§
 				coefficient = 0.2;
 
 			a2.ax += dir_x * Vab * coefficient;
@@ -226,11 +226,11 @@ void PedestrianSimulator::updateAcceleration()
 		}
 
 
-		Acceleration a3;//¼ÓËÙ¶ÈµÚÈıÏî£¬¼´Ç½±Ú¶Ôµ±Ç°ĞĞÈËµÄ³âÁ¦
+		Acceleration a3;//åŠ é€Ÿåº¦ç¬¬ä¸‰é¡¹ï¼Œå³å¢™å£å¯¹å½“å‰è¡Œäººçš„æ–¥åŠ›
 		a3.ax = 0;
 		a3.ay = 0;
-		double UaB0 = 10;//Õâ¸ö²ÎÊıÂÛÎÄÀïÊÇ10m
-		double R = 0.6;//Õâ¸ö²ÎÊıÂÛÎÄÀïÊÇ0.2m£¬ÎÒÖ®Ç°ÓÃµÄÊÇ0.6
+		double UaB0 = 10;//è¿™ä¸ªå‚æ•°è®ºæ–‡é‡Œæ˜¯10m
+		double R = 0.6;//è¿™ä¸ªå‚æ•°è®ºæ–‡é‡Œæ˜¯0.2mï¼Œæˆ‘ä¹‹å‰ç”¨çš„æ˜¯0.6
 		double ox, oy,dis;
 		dis = sceneStructure.GetClosestObstacle(p.curPosition.x, p.curPosition.y, ox, oy);
 		if (dis < 10) {
@@ -248,21 +248,21 @@ void PedestrianSimulator::updateAcceleration()
 
 		}
 
-		/*ÈËÔÚ¿¿½üÇ½±Ú£¬ÇÒÄ¿µÄµØÎ»ÓÚÇ½±ÚÍ¬Ò»²àÊ±£¬ĞĞÈËËÙ¶È»á´ó·ù¶È½µµÍ£¬ÒòÎªÇ½µÄ³âÁ¦µÖÏûÁËÄ¿µÄµØ¶ÔÈËµÄ´ó²¿·ÖÎüÒıÁ¦¡£ÎÒÔÚÕâÀï×öÁËÏàÓ¦µÄĞŞ¸Ä£¬¼´µ±¼ì²âµ½ĞĞÈËËÙ¶ÈºÜµÍ£¬ÇÒÄ¿µÄµØÒıÁ¦±»Ç½±Ú³âÁ¦µÖÏûÊ±£¬¾Í½«Ä¿µÄµØ¶ÔÈËµÄÎüÒıÁ¦È«¼Óµ½ĞĞÈËÄ¿Ç°µÄÇ°½ø·½ÏòÉÏ£¬ÕâÑù¾Í±£Ö¤ÁË¼´Ê¹ÈË¿¿½üÇ½±Ú£¬Ò²²»»á³öÏÖÔ­À´Ëã·¨ÖĞµÄ´ó·ù¶È¼õËÙÎÊÌâ¡£*/
-		double curSpeed = sqrt(pow(p.curSpeed.vx, 2) + pow(p.curSpeed.vy, 2));//µ±Ç°µÄËÙ¶È´óĞ¡£¬±êÁ¿
-		double curAccPersonAndObst = sqrt(pow(a1.ax + a3.ax, 2) + pow(a1.ay + a3.ay, 2));//µ±Ç°Ä¿µÄµØÒıÁ¦ÓëÇ½³âÁ¦ÏòÁ¿ºÍµÄ´óĞ¡£¬±êÁ¿
-		double curAccPerson = sqrt(pow(a1.ax, 2) + pow(a1.ay, 2));//µ±Ç°Ä¿µÄµØ¶ÔĞĞÈËµÄÒıÁ¦´óĞ¡£¬±êÁ¿
+		/*äººåœ¨é è¿‘å¢™å£ï¼Œä¸”ç›®çš„åœ°ä½äºå¢™å£åŒä¸€ä¾§æ—¶ï¼Œè¡Œäººé€Ÿåº¦ä¼šå¤§å¹…åº¦é™ä½ï¼Œå› ä¸ºå¢™çš„æ–¥åŠ›æŠµæ¶ˆäº†ç›®çš„åœ°å¯¹äººçš„å¤§éƒ¨åˆ†å¸å¼•åŠ›ã€‚æˆ‘åœ¨è¿™é‡Œåšäº†ç›¸åº”çš„ä¿®æ”¹ï¼Œå³å½“æ£€æµ‹åˆ°è¡Œäººé€Ÿåº¦å¾ˆä½ï¼Œä¸”ç›®çš„åœ°å¼•åŠ›è¢«å¢™å£æ–¥åŠ›æŠµæ¶ˆæ—¶ï¼Œå°±å°†ç›®çš„åœ°å¯¹äººçš„å¸å¼•åŠ›å…¨åŠ åˆ°è¡Œäººç›®å‰çš„å‰è¿›æ–¹å‘ä¸Šï¼Œè¿™æ ·å°±ä¿è¯äº†å³ä½¿äººé è¿‘å¢™å£ï¼Œä¹Ÿä¸ä¼šå‡ºç°åŸæ¥ç®—æ³•ä¸­çš„å¤§å¹…åº¦å‡é€Ÿé—®é¢˜ã€‚*/
+		double curSpeed = sqrt(pow(p.curSpeed.vx, 2) + pow(p.curSpeed.vy, 2));//å½“å‰çš„é€Ÿåº¦å¤§å°ï¼Œæ ‡é‡
+		double curAccPersonAndObst = sqrt(pow(a1.ax + a3.ax, 2) + pow(a1.ay + a3.ay, 2));//å½“å‰ç›®çš„åœ°å¼•åŠ›ä¸å¢™æ–¥åŠ›å‘é‡å’Œçš„å¤§å°ï¼Œæ ‡é‡
+		double curAccPerson = sqrt(pow(a1.ax, 2) + pow(a1.ay, 2));//å½“å‰ç›®çš„åœ°å¯¹è¡Œäººçš„å¼•åŠ›å¤§å°ï¼Œæ ‡é‡
 
-		if (curSpeed < p.tarSpeed*2 &&   curAccPersonAndObst< curAccPerson*0.8) {//Èç¹ûĞĞÈËËÙ¶ÈµÍ£¬ÇÒÇ½±Ú³âÁ¦µÖÏûÁË´ó²¿·ÖÄ¿µÄµØÒıÁ¦
+		if (curSpeed < p.tarSpeed*2 &&   curAccPersonAndObst< curAccPerson*0.8) {//å¦‚æœè¡Œäººé€Ÿåº¦ä½ï¼Œä¸”å¢™å£æ–¥åŠ›æŠµæ¶ˆäº†å¤§éƒ¨åˆ†ç›®çš„åœ°å¼•åŠ›
 			double lenth = sqrt(pow(p.curSpeed.vx, 2) + pow(p.curSpeed.vy, 2));//
-			double curDirx = p.curSpeed.vx / lenth;//µ±Ç°Ç°½ø·½Ïò
-			double curDiry = p.curSpeed.vy / lenth;//µ±Ç°Ç°½ø·½Ïò£¬×¢ÒâÊÇµ¥Î»ÏòÁ¿
-			double horizonAcc = a1.ax*curDirx + a1.ay*curDiry;//µ±Ç°Ä¿µÄµØÒıÁ¦ÔÚĞĞÈËÇ°½ø·½ÏòÉÏµÄ·ÖÁ¿
+			double curDirx = p.curSpeed.vx / lenth;//å½“å‰å‰è¿›æ–¹å‘
+			double curDiry = p.curSpeed.vy / lenth;//å½“å‰å‰è¿›æ–¹å‘ï¼Œæ³¨æ„æ˜¯å•ä½å‘é‡
+			double horizonAcc = a1.ax*curDirx + a1.ay*curDiry;//å½“å‰ç›®çš„åœ°å¼•åŠ›åœ¨è¡Œäººå‰è¿›æ–¹å‘ä¸Šçš„åˆ†é‡
 			a1.ax -= horizonAcc   * curDirx;//
-			a1.ay -= horizonAcc   * curDiry;//ÏÈ¼õµôÄ¿µÄµØÒıÁ¦Ë®Æ½·½Ïò·ÖÁ¿£¬ÏÖÔÚÄ¿µÄµØÒıÁ¦Ö»ÓĞ´¹Ö±ÓÚÇ½±ÚµÄ·ÖÁ¿ÁË
+			a1.ay -= horizonAcc   * curDiry;//å…ˆå‡æ‰ç›®çš„åœ°å¼•åŠ›æ°´å¹³æ–¹å‘åˆ†é‡ï¼Œç°åœ¨ç›®çš„åœ°å¼•åŠ›åªæœ‰å‚ç›´äºå¢™å£çš„åˆ†é‡äº†
 			a1.ax += curAccPerson * curDirx;
-			a1.ay += curAccPerson * curDiry;//ÏÖÔÚ£¬Æ½ĞĞÓÚÇ½±ÚµÄÁ¦µÄ´óĞ¡Ö±½ÓµÈÓÚÄ¿µÄµØÒıÁ¦´óĞ¡ÁË
-			//a3.ax = a3.ay = 0;//ÀÏ×Ó²»ÒªÇ½±ÚµÄ³âÁ¦ÁË£¡
+			a1.ay += curAccPerson * curDiry;//ç°åœ¨ï¼Œå¹³è¡Œäºå¢™å£çš„åŠ›çš„å¤§å°ç›´æ¥ç­‰äºç›®çš„åœ°å¼•åŠ›å¤§å°äº†
+			//a3.ax = a3.ay = 0;//è€å­ä¸è¦å¢™å£çš„æ–¥åŠ›äº†ï¼
 		}
 
 		p.curAcc.ax = a1.ax + a2.ax + a3.ax;
@@ -290,8 +290,8 @@ void PedestrianSimulator::updataStateMap()
 		theta = theta - ((int)(theta / 360.0)) * 360;
 		int dir = theta / 45;
 		
-		//ÎªÁËÊ¡ÊÂ£¬stateMapµÄchannel 0 ÓÃÀ´¼Ç×öÏòÓÒ×ßµÄÈË£¬channel 1 ¼ÇÏò×ó×ßµÄÈË£¬ channel 8 ¼Ç×ÜÈËÊı¡£¼´channel 0 + channel 1 = channel8¡£Ò²¾ÍÊÇËµ£¬Ê£ÏÂµÄchannelÔİÊ±Ã»ÓÃ
-		if (p.tarPostion.x > p.initPosition.x)//ÏòÓÒ×ß
+		//ä¸ºäº†çœäº‹ï¼ŒstateMapçš„channel 0 ç”¨æ¥è®°åšå‘å³èµ°çš„äººï¼Œchannel 1 è®°å‘å·¦èµ°çš„äººï¼Œ channel 8 è®°æ€»äººæ•°ã€‚å³channel 0 + channel 1 = channel8ã€‚ä¹Ÿå°±æ˜¯è¯´ï¼Œå‰©ä¸‹çš„channelæš‚æ—¶æ²¡ç”¨
+		if (p.tarPostion.x > p.initPosition.x)//å‘å³èµ°
 			dir = 0;
 		else
 			dir = 1;
@@ -306,7 +306,7 @@ void PedestrianSimulator::updataStateMap()
 					int tmp_x = j - (kernelPixelSize / 2);
 					if (ix + tmp_x >= sceneStructure.imgSize || ix + tmp_x < 0 || iy + tmp_y >= sceneStructure.imgSize || iy + tmp_y < 0)
 						continue;
-					StateMap.at<cv::Vec<float, 9>>(cv::Point(ix + tmp_x, iy + tmp_y))[8] += value;//ÒÔÈËÎªÖĞĞÄ£¬×ö¸ßË¹Ë¥¼õ
+					StateMap.at<cv::Vec<float, 9>>(cv::Point(ix + tmp_x, iy + tmp_y))[8] += value;//ä»¥äººä¸ºä¸­å¿ƒï¼Œåšé«˜æ–¯è¡°å‡
 					StateMap.at<cv::Vec<float, 9>>(cv::Point(ix + tmp_x, iy + tmp_y))[dir] += value;
 				}
 		}
@@ -434,33 +434,33 @@ void PedestrianSimulator::saveStateMap()
 
 	double maxL3 = 0;
 
-	cv::Mat colorStateMap = cv::Mat::zeros(StateMap.rows, StateMap.cols, CV_8UC3);//¸Ãmat±£´æµÄÊÇ²ÊÉ«×´Ì¬Í¼
+	cv::Mat colorStateMap = cv::Mat::zeros(StateMap.rows, StateMap.cols, CV_8UC3);//è¯¥matä¿å­˜çš„æ˜¯å½©è‰²çŠ¶æ€å›¾
 	for (int i = 0;i<StateMap.rows;i++)
 		for (int j = 0; j < StateMap.cols; j++) {
-			float L1 = StateMap.at<cv::Vec<float, 9>>(i, j)[0];//¸ÃÕ¤¸ñÖĞÏòÓÒ×ßµÄÈËÊı
-			float L2 =  StateMap.at<cv::Vec<float, 9>>(i, j)[1];//¸ÃÕ¤¸ñÖĞÏò×ó×ßµÄÈËÊı
-			float theta1 = 0;//ÏòÓÒ×ßÎªºìÉ«
-			float theta2  = (85/255.0)*180.0;//Ïò×ó×ßÎªÂÌÉ«¡£ÔÚwindows¶¨ÒåµÄHSLÉ«²ÊÄ£Ê½ÖĞ£¬h=85ÊÇÂÌÉ«¡£windows¶¨ÒåµÄhslÖĞhµÄ·¶Î§ÊÇ[0,255]£¬opencv¶¨ÒåµÄhlsÖĞhµÄ·¶Î§ÊÇ[0,180]£¬ÕâÀï×öÁËÒ»¸ö´Ówindowsµ½opencvÉ«²Ê¶¨ÒåµÄ×ª»»
+			float L1 = StateMap.at<cv::Vec<float, 9>>(i, j)[0];//è¯¥æ …æ ¼ä¸­å‘å³èµ°çš„äººæ•°
+			float L2 =  StateMap.at<cv::Vec<float, 9>>(i, j)[1];//è¯¥æ …æ ¼ä¸­å‘å·¦èµ°çš„äººæ•°
+			float theta1 = 0;//å‘å³èµ°ä¸ºçº¢è‰²
+			float theta2  = (85/255.0)*180.0;//å‘å·¦èµ°ä¸ºç»¿è‰²ã€‚åœ¨windowså®šä¹‰çš„HSLè‰²å½©æ¨¡å¼ä¸­ï¼Œh=85æ˜¯ç»¿è‰²ã€‚windowså®šä¹‰çš„hslä¸­hçš„èŒƒå›´æ˜¯[0,255]ï¼Œopencvå®šä¹‰çš„hlsä¸­hçš„èŒƒå›´æ˜¯[0,180]ï¼Œè¿™é‡Œåšäº†ä¸€ä¸ªä»windowsåˆ°opencvè‰²å½©å®šä¹‰çš„è½¬æ¢
 			theta1 = theta1 * CV_PI / 180;
 			theta2 = theta2 * CV_PI / 180;
-			float L3 = sqrt(L1 * L1 + L2 * L2 + 2 * L1 * L2 * cos(theta1 - theta2));//ÕâÒ»²½¼ÆËãµÄÊÇÖĞ¼ä±äÁ¿
+			float L3 = sqrt(L1 * L1 + L2 * L2 + 2 * L1 * L2 * cos(theta1 - theta2));//è¿™ä¸€æ­¥è®¡ç®—çš„æ˜¯ä¸­é—´å˜é‡
 			if (L3 < 1e-3) {
 				colorStateMap.at<cv::Vec3b>(i, j)[0] = 0;
 				colorStateMap.at<cv::Vec3b>(i, j)[1] = 255;
 				colorStateMap.at<cv::Vec3b>(i, j)[2] = 0;
 				continue;
 			}
-			float theta3 = acos((L1*cos(theta1) + L2 * cos(theta2)) / L3);//Ê¹ÓÃopencvµÄhlsÑÕÉ«Ä£Ê½ÎªĞĞÈË·½Ïò¸³Öµ£¬ÆäÖĞÁî±¥ºÍ¶È¶¼Îª255¡£¶¨ÒåÏòÓÒ×ßÎªºìÉ«£¬Ïò×ó×ßÎªÂÌÉ«£¬ÑÕÉ«µÄÁÁ¶ÈÓÉÈËÊı¾ö¶¨£¬ÈËÔ½¶àÁÁ¶ÈÔ½½Ó½ü128£¬ÈËÔ½ÉÙÁÁ¶ÈÔ½½Ó½ü255¡£ÈËÁ÷½»»ã´¦µÄÑÕÉ«ÓÉºìÉ«/ÂÌÉ«»ìºÏ¶ø³É£¬ÆäÉ«µ÷£¨ÏòÁ¿·½Ïò£©µÈÓÚÁ½¹ÉÈËÁ÷¶ÔÓ¦ÑÕÉ«µÄÏòÁ¿ºÍµÄ·½Ïò£¬ÁÁ¶ÈµÈÓÚÁ½¹ÉÈËÁ÷µÄÁÁ¶ÈÖ®ºÍ
-			theta3 = theta3 * 180 / CV_PI;//¼ÆËã¸ÃÕ¤¸ñµÄÑÕÉ«£¬¶ÔÓ¦opencvÖĞhlsÑÕÉ«Ä£Ê½µÄh£¨É«µ÷£©
-			L3 = L1 + L2;//¼ÆËã¸ÃÕ¤¸ñµÄÁÁ¶È£¬¶ÔÓ¦opencvÖĞhlsÑÕÉ«Ä£Ê½µÄl£¨ÁÁ¶È£©¡£ÈËÔ½¶àÁÁ¶ÈÔ½½Ó½ü128£¬ÈËÔ½ÉÙÁÁ¶ÈÔ½½Ó½ü255
+			float theta3 = acos((L1*cos(theta1) + L2 * cos(theta2)) / L3);//ä½¿ç”¨opencvçš„hlsé¢œè‰²æ¨¡å¼ä¸ºè¡Œäººæ–¹å‘èµ‹å€¼ï¼Œå…¶ä¸­ä»¤é¥±å’Œåº¦éƒ½ä¸º255ã€‚å®šä¹‰å‘å³èµ°ä¸ºçº¢è‰²ï¼Œå‘å·¦èµ°ä¸ºç»¿è‰²ï¼Œé¢œè‰²çš„äº®åº¦ç”±äººæ•°å†³å®šï¼Œäººè¶Šå¤šäº®åº¦è¶Šæ¥è¿‘128ï¼Œäººè¶Šå°‘äº®åº¦è¶Šæ¥è¿‘255ã€‚äººæµäº¤æ±‡å¤„çš„é¢œè‰²ç”±çº¢è‰²/ç»¿è‰²æ··åˆè€Œæˆï¼Œå…¶è‰²è°ƒï¼ˆå‘é‡æ–¹å‘ï¼‰ç­‰äºä¸¤è‚¡äººæµå¯¹åº”é¢œè‰²çš„å‘é‡å’Œçš„æ–¹å‘ï¼Œäº®åº¦ç­‰äºä¸¤è‚¡äººæµçš„äº®åº¦ä¹‹å’Œ
+			theta3 = theta3 * 180 / CV_PI;//è®¡ç®—è¯¥æ …æ ¼çš„é¢œè‰²ï¼Œå¯¹åº”opencvä¸­hlsé¢œè‰²æ¨¡å¼çš„hï¼ˆè‰²è°ƒï¼‰
+			L3 = L1 + L2;//è®¡ç®—è¯¥æ …æ ¼çš„äº®åº¦ï¼Œå¯¹åº”opencvä¸­hlsé¢œè‰²æ¨¡å¼çš„lï¼ˆäº®åº¦ï¼‰ã€‚äººè¶Šå¤šäº®åº¦è¶Šæ¥è¿‘128ï¼Œäººè¶Šå°‘äº®åº¦è¶Šæ¥è¿‘255
 			
 			if (L3 > maxL3)
 				maxL3 = L3;
 
-			L3 = L3 > 128 ? 128 : L3;//ÁÁ¶ÈÎª255Ê±¶ÔÓ¦°×É«ÁË£¬ÁÁ¶ÈÎª0Ê±¶ÔÓ¦ºÚÉ«ÁË£¬ÁÁ¶ÈÎª128Ê±ÊÇÓÉ°×±äºÚµÄÖĞ¼äµã
+			L3 = L3 > 128 ? 128 : L3;//äº®åº¦ä¸º255æ—¶å¯¹åº”ç™½è‰²äº†ï¼Œäº®åº¦ä¸º0æ—¶å¯¹åº”é»‘è‰²äº†ï¼Œäº®åº¦ä¸º128æ—¶æ˜¯ç”±ç™½å˜é»‘çš„ä¸­é—´ç‚¹
 			colorStateMap.at<cv::Vec3b>(i, j)[0] = theta3;
 			colorStateMap.at<cv::Vec3b>(i, j)[1] = 255 - L3;
-			colorStateMap.at<cv::Vec3b>(i, j)[2] = 255;//±¥ºÍ¶È¶¼Îª255
+			colorStateMap.at<cv::Vec3b>(i, j)[2] = 255;//é¥±å’Œåº¦éƒ½ä¸º255
 		}
 	printf("Max people = %.2lf\n", maxL3);
 	

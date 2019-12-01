@@ -1,4 +1,4 @@
-#ifndef _INIFILE_CPP
+﻿#ifndef _INIFILE_CPP
 #define _INIFILE_CPP
 
 #include "inifile.h"

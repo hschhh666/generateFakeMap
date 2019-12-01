@@ -1,7 +1,7 @@
-#pragma once
+ï»¿#pragma once
 #include "opencvHeader.h"
 #include <random>
-//¶¨ÒåÊı¾İ½á¹¹
+//å®šä¹‰æ•°æ®ç»“æ„
 
 struct Position {
 	double x;
@@ -22,18 +22,18 @@ struct Acceleration
 
 
 
-//ÕâÀï¶¨Òåµ¥¸öĞĞÈËµÄĞÅÏ¢
+//è¿™é‡Œå®šä¹‰å•ä¸ªè¡Œäººçš„ä¿¡æ¯
 class PedestrianInfo {
 public:
 	PedestrianInfo() {};
 	PedestrianInfo(Position cur, Position tar);
 
-	Position curPosition;//µ±Ç°Î»ÖÃ
-	Position lastPosition;//ÉÏÒ»Ê±¿ÌÎ»ÖÃ
-	Position initPosition;//³õÊ¼Ê±¿ÌÎ»ÖÃ
-	Position tarPostion;//Ä¿±êÎ»ÖÃ
-	Speed curSpeed;//µ±Ç°ËÙ¶È
-	Acceleration curAcc;//µ±Ç°¼ÓËÙ¶È
+	Position curPosition;//å½“å‰ä½ç½®
+	Position lastPosition;//ä¸Šä¸€æ—¶åˆ»ä½ç½®
+	Position initPosition;//åˆå§‹æ—¶åˆ»ä½ç½®
+	Position tarPostion;//ç›®æ ‡ä½ç½®
+	Speed curSpeed;//å½“å‰é€Ÿåº¦
+	Acceleration curAcc;//å½“å‰åŠ é€Ÿåº¦
 	double tarSpeed;//  m/s
 	std::list<Position> roadPoints;
 
@@ -45,31 +45,31 @@ private:
 };
 
 
-//ÕâÀï¶¨Òå³¡¾°µÄ½¨ÖşÎï¡¢³ß´ç¡¢ÆğµãÖÕµãµÈ
+//è¿™é‡Œå®šä¹‰åœºæ™¯çš„å»ºç­‘ç‰©ã€å°ºå¯¸ã€èµ·ç‚¹ç»ˆç‚¹ç­‰
 class SceneStructure {
 
 public:
 	SceneStructure() {};
-	void InitScene(std::string filename);//³õÊ¼»¯µØÍ¼
-	double GetClosestObstacle(double px, double py, double & ox, double & oy);//meter   ÊäÈëÒ»¸öµã(px,py)£¬·µ»ØµØÍ¼ÉÏ¾àÀë¸ÃµãÒ»¶¨·¶Î§ÄÚ×î½üµÄÒ»¸öÕÏ°­µã(ox,oy£©
-	void ShowScene(int key, std::string imgname);//µØÍ¼¿ÉÊÓ»¯
+	void InitScene(std::string filename);//åˆå§‹åŒ–åœ°å›¾
+	double GetClosestObstacle(double px, double py, double & ox, double & oy);//meter   è¾“å…¥ä¸€ä¸ªç‚¹(px,py)ï¼Œè¿”å›åœ°å›¾ä¸Šè·ç¦»è¯¥ç‚¹ä¸€å®šèŒƒå›´å†…æœ€è¿‘çš„ä¸€ä¸ªéšœç¢ç‚¹(ox,oyï¼‰
+	void ShowScene(int key, std::string imgname);//åœ°å›¾å¯è§†åŒ–
 	
 
-	bool CoordinateConventer(double, double, int&, int&);//È«¾Ö×ø±êÓëÍ¼Ïñ×ø±êµÄ×ª»»£¬ÈôÊäÈëµÄÈ«¾Ö×ø±êµã³öÏÖÔÚ¸ÃµØÍ¼ÖĞÔò·µ»Øtrue£¬·ñÔò·µ»Øfalse
-	bool CoordinateConventer(int, int, double&, double&);//È«¾Ö×ø±êÓëÍ¼Ïñ×ø±êµÄ×ª»»£¬ÈôÊäÈëµÄÍ¼Ïñ×ø±êÔÚ¸ÃÍ¼Ïñ·¶Î§ÄÚÔò·µ»Øtrue£¬·ñÔò·µ»Øfalse£»
+	bool CoordinateConventer(double, double, int&, int&);//å…¨å±€åæ ‡ä¸å›¾åƒåæ ‡çš„è½¬æ¢ï¼Œè‹¥è¾“å…¥çš„å…¨å±€åæ ‡ç‚¹å‡ºç°åœ¨è¯¥åœ°å›¾ä¸­åˆ™è¿”å›trueï¼Œå¦åˆ™è¿”å›false
+	bool CoordinateConventer(int, int, double&, double&);//å…¨å±€åæ ‡ä¸å›¾åƒåæ ‡çš„è½¬æ¢ï¼Œè‹¥è¾“å…¥çš„å›¾åƒåæ ‡åœ¨è¯¥å›¾åƒèŒƒå›´å†…åˆ™è¿”å›trueï¼Œå¦åˆ™è¿”å›falseï¼›
 	
-	double leftUpCornerX, leftUpCornerY;//Í¼Ïñ×óÉÏ½Ç¶ÔÓ¦µÄÕæÊµÊÀ½çÖĞµÄÈ«¾Ö×ø±ê
+	double leftUpCornerX, leftUpCornerY;//å›¾åƒå·¦ä¸Šè§’å¯¹åº”çš„çœŸå®ä¸–ç•Œä¸­çš„å…¨å±€åæ ‡
 
-	cv::Mat sceneState;//°ÑÈËÒ²»¨ÔÚ³¡¾°½á¹¹ÉÏÁË
+	cv::Mat sceneState;//æŠŠäººä¹ŸèŠ±åœ¨åœºæ™¯ç»“æ„ä¸Šäº†
 
-	std::vector<Position> StartEndPositions;//meter ±£´æ×ÅËùÓĞµÄÄ¿±êµã
+	std::vector<Position> StartEndPositions;//meter ä¿å­˜ç€æ‰€æœ‰çš„ç›®æ ‡ç‚¹
 	
 //private:
-	int imgSize;//pixel µØÍ¼µÄÏñËØ´óĞ¡
-	double sceneSize;//meter µØÍ¼¶ÔÓ¦µÄÊµ¼ÊÎïÀí»·¾³´óĞ¡
-	double pixelSize;//meter Ã¿¸öÏñËØ¶ÔÓ¦µÄÊµ¼ÊÎïÀí³ß´ç
+	int imgSize;//pixel åœ°å›¾çš„åƒç´ å¤§å°
+	double sceneSize;//meter åœ°å›¾å¯¹åº”çš„å®é™…ç‰©ç†ç¯å¢ƒå¤§å°
+	double pixelSize;//meter æ¯ä¸ªåƒç´ å¯¹åº”çš„å®é™…ç‰©ç†å°ºå¯¸
 	
-	cv::Mat scene;//±£´æ×Å³¡¾°µÄ½á¹¹
+	cv::Mat scene;//ä¿å­˜ç€åœºæ™¯çš„ç»“æ„
 	
 	
 	

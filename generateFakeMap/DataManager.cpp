@@ -1,4 +1,4 @@
-#include "DataManager.h"
+ï»¿#include "DataManager.h"
 
 PedestrianInfo::PedestrianInfo(Position cur, Position tar)
 {
@@ -16,7 +16,7 @@ PedestrianInfo::PedestrianInfo(Position cur, Position tar)
 	std::normal_distribution<> ty{ tar.y,sigma_py };
 	tarPostion.y = ty(gen);
 
-	std::normal_distribution<> tarv{ 1.34,0.26 };//Õâ¸ö²ÎÊıÊÇ´ÓÂÛÎÄÀï³­µÄ
+	std::normal_distribution<> tarv{ 1.34,0.26 };//è¿™ä¸ªå‚æ•°æ˜¯ä»è®ºæ–‡é‡ŒæŠ„çš„
 	//std::normal_distribution<> tarv{ 2.68,0.26 };
 	tarSpeed = tarv(gen);
 
@@ -86,10 +86,10 @@ double SceneStructure::GetClosestObstacle(double px, double py, double & ox, dou
 	CoordinateConventer(px, py, ix, iy);
 
 	if (abs(ix) >= imgSize || abs(iy) >= imgSize)
-		return 0;//Èç¹ûµ±Ç°Î»ÖÃÒÑ¾­³¬³öÁËµØÍ¼·¶Î§£¬ÔòÈÏÎªÒÑ¾­ÔÚÕÏ°­ÎïÉÏÁË
+		return 0;//å¦‚æœå½“å‰ä½ç½®å·²ç»è¶…å‡ºäº†åœ°å›¾èŒƒå›´ï¼Œåˆ™è®¤ä¸ºå·²ç»åœ¨éšœç¢ç‰©ä¸Šäº†
 
 	double mindis = 99999999;
-	double range = 10;//meter£¬Èç¹û10Ã×·¶Î§ÄÚ¶¼Ã»ÓĞÕÏ°­Îï£¬ÔòÈÏÎª×î½üµÄÕÏ°­ÎïÔÚ99999999Ã×Ö®Íâ
+	double range = 10;//meterï¼Œå¦‚æœ10ç±³èŒƒå›´å†…éƒ½æ²¡æœ‰éšœç¢ç‰©ï¼Œåˆ™è®¤ä¸ºæœ€è¿‘çš„éšœç¢ç‰©åœ¨99999999ç±³ä¹‹å¤–
 	int imageRange = range / pixelSize;
 	for(x = ix - imageRange;x<=ix+imageRange;x++)
 		for (y = iy - imageRange; y <= iy + imageRange; y++) {
@@ -107,15 +107,15 @@ double SceneStructure::GetClosestObstacle(double px, double py, double & ox, dou
 				oy = tmpy;
 			}
 		}
-	if (mindis < pixelSize)//Èç¹û¾àÀëÕÏ°­ÎïµÄ¾àÀë±ÈµØÍ¼·Ö±æÂÊ»¹Ğ¡£¬ÔòÈÏÎªÒÑ¾­ÔÚÕÏ°­ÎïÉÏÁË
+	if (mindis < pixelSize)//å¦‚æœè·ç¦»éšœç¢ç‰©çš„è·ç¦»æ¯”åœ°å›¾åˆ†è¾¨ç‡è¿˜å°ï¼Œåˆ™è®¤ä¸ºå·²ç»åœ¨éšœç¢ç‰©ä¸Šäº†
 		mindis = 0;
 
 	return mindis;
 }
 
-//È«¾Ö×ø±êÓëÍ¼Ïñ×ø±êµÄ×ª»»£¬ÈôÊäÈëµÄÈ«¾Ö×ø±êµã³öÏÖÔÚ¸ÃµØÍ¼ÖĞÔò·µ»Øtrue£¬·ñÔò·µ»Øfalse
-//È«¾ÖµØÍ¼ÖĞ£¬¶¨ÒåºáÏòÎªx£¬ÏòÓÒÎªÕı£»×İÏòÎªy£¬ÏòÉÏÎªÕı¡£²ÉÈ¡¶«±±Ìì×ø±êÏµ£¬¼´ÓÒ¶«£¬ÉÏ±±
-//imgxÖ¸ºáÏò×ø±ê£¬ÏòÓÒÎªÕı£»imgyÖ¸×İÏò×ø±ê£¬ÏòÏÂÎªÕı¡£Ò»¶¨Òª×¢ÒâÕâÀï¶Ô×ø±êÏµµÄ¶¨Òå¡£ÒòÎªÔÚopencvÖĞ£¬cv::Point(x,y)µÄx£¬y×ø±êÓëÎÒÇ°Ãæ¶¨ÒåµÄÏàÍ¬¡£
+//å…¨å±€åæ ‡ä¸å›¾åƒåæ ‡çš„è½¬æ¢ï¼Œè‹¥è¾“å…¥çš„å…¨å±€åæ ‡ç‚¹å‡ºç°åœ¨è¯¥åœ°å›¾ä¸­åˆ™è¿”å›trueï¼Œå¦åˆ™è¿”å›false
+//å…¨å±€åœ°å›¾ä¸­ï¼Œå®šä¹‰æ¨ªå‘ä¸ºxï¼Œå‘å³ä¸ºæ­£ï¼›çºµå‘ä¸ºyï¼Œå‘ä¸Šä¸ºæ­£ã€‚é‡‡å–ä¸œåŒ—å¤©åæ ‡ç³»ï¼Œå³å³ä¸œï¼Œä¸ŠåŒ—
+//imgxæŒ‡æ¨ªå‘åæ ‡ï¼Œå‘å³ä¸ºæ­£ï¼›imgyæŒ‡çºµå‘åæ ‡ï¼Œå‘ä¸‹ä¸ºæ­£ã€‚ä¸€å®šè¦æ³¨æ„è¿™é‡Œå¯¹åæ ‡ç³»çš„å®šä¹‰ã€‚å› ä¸ºåœ¨opencvä¸­ï¼Œcv::Point(x,y)çš„xï¼Œyåæ ‡ä¸æˆ‘å‰é¢å®šä¹‰çš„ç›¸åŒã€‚
 bool SceneStructure::CoordinateConventer(double x, double y, int & imgx, int & imgy)
 {
 	imgx = (x - leftUpCornerX) / pixelSize;
@@ -125,10 +125,10 @@ bool SceneStructure::CoordinateConventer(double x, double y, int & imgx, int & i
 	return true;
 }
 
-//È«¾Ö×ø±êÓëÍ¼Ïñ×ø±êµÄ×ª»»£¬ÈôÊäÈëµÄÍ¼Ïñ×ø±êÔÚ¸ÃÍ¼Ïñ·¶Î§ÄÚÔò·µ»Øtrue£¬·ñÔò·µ»Øfalse£»
-//imgxºÍimgyÖ¸Í¼Ïñ×ø±êÏµ£¬Í¼ÏñÖĞµÄ×ø±êÏµ£»x£¬yÖ¸È«¾ÖµØÍ¼µÄ×ø±êÏµ
-//imgxÖ¸ºáÏò×ø±ê£¬ÏòÓÒÎªÕı£»imgyÖ¸×İÏò×ø±ê£¬ÏòÏÂÎªÕı¡£Ò»¶¨Òª×¢ÒâÕâÀï¶Ô×ø±êÏµµÄ¶¨Òå¡£ÒòÎªÔÚopencvÖĞ£¬cv::Point(x,y)µÄx£¬y×ø±êÓëÎÒÇ°Ãæ¶¨ÒåµÄÏàÍ¬¡£
-//Í¼Ïñ¶¨ÒåµÄµØÍ¼ÖĞ£¬¶¨ÒåºáÏòÎªx£¬ÏòÓÒÎªÕı£»×İÏòÎªy£¬ÏòÉÏÎªÕı¡£²ÉÈ¡¶«±±Ìì×ø±êÏµ£¬¼´ÓÒ¶«£¬ÉÏ±±
+//å…¨å±€åæ ‡ä¸å›¾åƒåæ ‡çš„è½¬æ¢ï¼Œè‹¥è¾“å…¥çš„å›¾åƒåæ ‡åœ¨è¯¥å›¾åƒèŒƒå›´å†…åˆ™è¿”å›trueï¼Œå¦åˆ™è¿”å›falseï¼›
+//imgxå’ŒimgyæŒ‡å›¾åƒåæ ‡ç³»ï¼Œå›¾åƒä¸­çš„åæ ‡ç³»ï¼›xï¼ŒyæŒ‡å…¨å±€åœ°å›¾çš„åæ ‡ç³»
+//imgxæŒ‡æ¨ªå‘åæ ‡ï¼Œå‘å³ä¸ºæ­£ï¼›imgyæŒ‡çºµå‘åæ ‡ï¼Œå‘ä¸‹ä¸ºæ­£ã€‚ä¸€å®šè¦æ³¨æ„è¿™é‡Œå¯¹åæ ‡ç³»çš„å®šä¹‰ã€‚å› ä¸ºåœ¨opencvä¸­ï¼Œcv::Point(x,y)çš„xï¼Œyåæ ‡ä¸æˆ‘å‰é¢å®šä¹‰çš„ç›¸åŒã€‚
+//å›¾åƒå®šä¹‰çš„åœ°å›¾ä¸­ï¼Œå®šä¹‰æ¨ªå‘ä¸ºxï¼Œå‘å³ä¸ºæ­£ï¼›çºµå‘ä¸ºyï¼Œå‘ä¸Šä¸ºæ­£ã€‚é‡‡å–ä¸œåŒ—å¤©åæ ‡ç³»ï¼Œå³å³ä¸œï¼Œä¸ŠåŒ—
 bool SceneStructure::CoordinateConventer(int imgx, int imgy, double &x, double &y)
 {
 	x = ((double)imgx)*pixelSize + leftUpCornerX;

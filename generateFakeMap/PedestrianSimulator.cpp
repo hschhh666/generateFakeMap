@@ -440,7 +440,7 @@ void PedestrianSimulator::saveStateMap()
 			float L1 = StateMap.at<cv::Vec<float, 9>>(i, j)[0];//该栅格中向右走的人数
 			float L2 =  StateMap.at<cv::Vec<float, 9>>(i, j)[1];//该栅格中向左走的人数
 			float theta1 = 0;//向右走为红色
-			float theta2  = (170/255.0)*180.0;//向左走为蓝色。在windows定义的HSL色彩模式中，h=170是蓝色。windows定义的hsl中h的范围是[0,255]，opencv定义的hls中h的范围是[0,180]，这里做了一个从windows到opencv色彩定义的转换
+			float theta2  = (85/255.0)*180.0;//向左走为绿色。在windows定义的HSL色彩模式中，h=85是绿色。windows定义的hsl中h的范围是[0,255]，opencv定义的hls中h的范围是[0,180]，这里做了一个从windows到opencv色彩定义的转换
 			theta1 = theta1 * CV_PI / 180;
 			theta2 = theta2 * CV_PI / 180;
 			float L3 = sqrt(L1 * L1 + L2 * L2 + 2 * L1 * L2 * cos(theta1 - theta2));//这一步计算的是中间变量
@@ -450,7 +450,7 @@ void PedestrianSimulator::saveStateMap()
 				colorStateMap.at<cv::Vec3b>(i, j)[2] = 0;
 				continue;
 			}
-			float theta3 = acos((L1*cos(theta1) + L2 * cos(theta2)) / L3);//使用opencv的hls颜色模式为行人方向赋值，其中令饱和度都为255。定义向右走为红色，向左走为蓝色，颜色的亮度由人数决定，人越多亮度越接近128，人越少亮度越接近255。人流交汇处的颜色由红色/蓝色混合而成，其色调（向量方向）等于两股人流对应颜色的向量和的方向，亮度等于两股人流的亮度之和
+			float theta3 = acos((L1*cos(theta1) + L2 * cos(theta2)) / L3);//使用opencv的hls颜色模式为行人方向赋值，其中令饱和度都为255。定义向右走为红色，向左走为绿色，颜色的亮度由人数决定，人越多亮度越接近128，人越少亮度越接近255。人流交汇处的颜色由红色/绿色混合而成，其色调（向量方向）等于两股人流对应颜色的向量和的方向，亮度等于两股人流的亮度之和
 			theta3 = theta3 * 180 / CV_PI;//计算该栅格的颜色，对应opencv中hls颜色模式的h（色调）
 			L3 = L1 + L2;//计算该栅格的亮度，对应opencv中hls颜色模式的l（亮度）。人越多亮度越接近128，人越少亮度越接近255
 			

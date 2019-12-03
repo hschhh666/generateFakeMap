@@ -39,8 +39,8 @@ public:
 
 private:
 	
-	double sigma_px = 1.5;
-	double sigma_py = 1.5;
+	double sigma_px = 1;
+	double sigma_py = 1;
 
 };
 

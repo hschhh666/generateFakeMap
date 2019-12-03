@@ -480,8 +480,8 @@ void PedestrianSimulator::saveStateMap()
 		}
 	//cv::imshow("test", channels[8]);
 	//cv::waitKey(0);
-	cv::imwrite(outputDir + ".jpg", channels[8]);
-	printf("Write state map to %s\n", outputDir + ".jpg");
+	//cv::imwrite(outputDir + ".jpg", channels[8]);
+	//printf("Write state map to %s\n", outputDir + ".jpg");
 	
 
 }

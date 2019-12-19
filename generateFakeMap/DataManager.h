@@ -50,7 +50,7 @@ class SceneStructure {
 
 public:
 	SceneStructure() {};
-	void InitScene(std::string filename);//初始化地图
+	void InitScene(std::string filename, std::string satelliteFile);//初始化地图
 	double GetClosestObstacle(double px, double py, double & ox, double & oy);//meter   输入一个点(px,py)，返回地图上距离该点一定范围内最近的一个障碍点(ox,oy）
 	void ShowScene(int key, std::string imgname);//地图可视化
 	

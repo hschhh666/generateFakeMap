@@ -2,11 +2,11 @@
 
 
 
-PedestrianSimulator::PedestrianSimulator(std::string sceneFile, std::string pedestrianFile, int VisualRate, std::string videoFile,std::string outputFile)
+PedestrianSimulator::PedestrianSimulator(std::string sceneFile, std::string satelliteFile,std::string pedestrianFile, int VisualRate, std::string videoFile,std::string outputFile)
 {
 
 	visualRate = VisualRate;
-	sceneStructure.InitScene(sceneFile);
+	sceneStructure.InitScene(sceneFile,satelliteFile);
 	cv::FileStorage storage(pedestrianFile, cv::FileStorage::READ);
 	storage["matrix"] >> pedestrianMatrix;//读取场景结构
 	for (int i = 0; i < pedestrianMatrix.rows; i++)

@@ -35,7 +35,7 @@ PedestrianInfo::PedestrianInfo(Position cur, Position tar)
 
 
 
-void SceneStructure::InitScene(std::string filename)
+void SceneStructure::InitScene(std::string filename, std::string satelliteFile)
 {
 	leftUpCornerX = leftUpCornerY = 0;
 	cv::FileStorage storage(filename, cv::FileStorage::READ);
@@ -60,14 +60,31 @@ void SceneStructure::InitScene(std::string filename)
 		StartEndPositions.push_back(p);
 	}
 	storage["structure"] >> scene;
-	sceneState = scene.clone();
+
+	cv::Mat satelliteMap = cv::imread(satelliteFile);
+	if (satelliteMap.empty()) {
+		std::cout << "Cannot open file " << satelliteFile << " ,press any key to exit.\n";
+		getchar();
+		exit(-1);
+	}
+
+	if (satelliteMap.cols != int(sceneSize / pixelSize)) {
+		printf("Warning! Satellite map size is %d x %d pixels\n" , satelliteMap.cols, satelliteMap.cols);
+	}
+
+	cv::resize(satelliteMap, satelliteMap, cv::Size(int(sceneSize / pixelSize), int(sceneSize / pixelSize)));
+
+	sceneState = scene.clone();//之前是显示场景的mask，现在改成显示场景的卫星图
+	sceneState = satelliteMap.clone();
+
+
 	for (int i = 0; i < targetPositionsNum; i++)
 	{
 		cv::circle(sceneState, cv::Point(StartEndPositions[i].x, StartEndPositions[i].y), 4, cv::Scalar(0, 0, 255), -1);
 		cv::putText(sceneState, std::to_string(i), cv::Point(StartEndPositions[i].x + 5, StartEndPositions[i].y + 5), 1, 1, cv::Scalar(0, 0, 0));
 	}
 	
-	for (auto &p : StartEndPositions) {
+	for (auto &p : StartEndPositions) {//把各个拓扑点的坐标由图像坐标转换为全局坐标
 		int x = p.x;
 		int y = p.y;
 		CoordinateConventer(x, y, p.x, p.y);

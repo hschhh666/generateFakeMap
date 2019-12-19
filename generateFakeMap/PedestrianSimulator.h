@@ -7,7 +7,7 @@ class PedestrianSimulator
 {
 public:
 	//simulator的输入是场景结构、场景中人流频率与方向、是否可视化仿真过程以及方阵视频存储位置
-	PedestrianSimulator(std::string sceneFile, std::string pedestrianFile, int VisualRate = 0,std::string videoFile = "", std::string outputFile = "");
+	PedestrianSimulator(std::string sceneFile, std::string satelliteFile,std::string pedestrianFile, int VisualRate = 0,std::string videoFile = "", std::string outputFile = "");
 	void DoSimulation(double delta_t, int timelong);
 	~PedestrianSimulator();
 

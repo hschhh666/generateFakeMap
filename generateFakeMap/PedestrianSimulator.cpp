@@ -6,20 +6,20 @@ PedestrianSimulator::PedestrianSimulator(std::string sceneFile, std::string sate
 {
 
 	visualRate = VisualRate;
-	sceneStructure.InitScene(sceneFile,satelliteFile);
+	sceneStructure.InitScene(sceneFile,satelliteFile);//读取场景结构和卫星图
 	cv::FileStorage storage(pedestrianFile, cv::FileStorage::READ);
-	storage["matrix"] >> pedestrianMatrix;//读取场景结构
+	storage["matrix"] >> pedestrianMatrix;//读取人流密度矩阵
 	for (int i = 0; i < pedestrianMatrix.rows; i++)
 	{
 		for (int j = 0; j < pedestrianMatrix.cols; j++) {
-			std::cout << pedestrianMatrix.at<double>(i, j) << " ";//读取人流密度矩阵
+			std::cout << pedestrianMatrix.at<double>(i, j) << " ";//输出人流密度矩阵
 		}
 
 		std::cout << std::endl;
 	}
 	
 	if(videoFile!="")
-		if (!video.open(videoFile, CV_FOURCC('X', 'V', 'I', 'D'), 20, cv::Size(500, 500))) {
+		if (!video.open(videoFile, CV_FOURCC('X', 'V', 'I', 'D'), 10, cv::Size(sceneStructure.imgSize, sceneStructure.imgSize))) {
 			std::cout << "Cannot open video file " << videoFile << ", program exit.\n";
 			exit(-4);
 		}
@@ -28,10 +28,10 @@ PedestrianSimulator::PedestrianSimulator(std::string sceneFile, std::string sate
 	StateMap = cv::Mat::zeros(cv::Size(sceneStructure.sceneState.rows, sceneStructure.sceneState.cols), CV_32FC(9));//初始化状态地图
 	outputDir = outputFile;
 	
-	double kernelSize = 1;//计算以人为中心，kernelSize米范围内
+	double kernelSize = 0.5;//计算以人为中心，kernelSize米范围内
 	double pixelSize = sceneStructure.pixelSize;
 	int kernelPixelSize = 2*(kernelSize / pixelSize) + 1;
-	double theta = 0.4;//高斯核的衰减半径，theta时衰减到0.6
+	double theta = 0.2;//高斯核的衰减半径，theta时衰减到0.6
 	
 	stateMapKernal = cv::Mat::zeros(cv::Size(kernelPixelSize, kernelPixelSize), CV_32F);
 	for (int i = 0;i< kernelPixelSize;i++)
@@ -105,18 +105,28 @@ void PedestrianSimulator::generatePedestrian()
 
 			tmpMatrix.at<float>(i, j)++;
 
-			double tmp1, tmp2, dis1,dis2;
+			double tmp1, tmp2, dis1,dis2,dis3;
 			do {
-				PedestrianInfo onePedestrian(sceneStructure.StartEndPositions[i], sceneStructure.StartEndPositions[j]);
+
+				std::vector<Position> roadPoints;
+				roadPoints.push_back(sceneStructure.StartEndPositions[i]);
+				int midpoint = sceneStructure.HiddenMatrix.at<double>(i, j);
+				if (midpoint >= 0)
+					roadPoints.push_back(sceneStructure.HiddenPositions.at(midpoint));
+				roadPoints.push_back(sceneStructure.StartEndPositions[j]);
+
+				//PedestrianInfo onePedestrian(sceneStructure.StartEndPositions[i], sceneStructure.StartEndPositions[j]);
+				PedestrianInfo onePedestrian(roadPoints);
 				dis1 = sceneStructure.GetClosestObstacle(onePedestrian.curPosition.x, onePedestrian.curPosition.y, tmp1, tmp2);//行人不能出生在障碍物上
 				dis2 = sceneStructure.GetClosestObstacle(onePedestrian.tarPostion.x, onePedestrian.tarPostion.y, tmp1, tmp2);//目的地不可以在障碍物上
+				dis3 = 10000;
+				if(midpoint >=0 )
+					dis3 = sceneStructure.GetClosestObstacle(onePedestrian.endPosition.x, onePedestrian.endPosition.y, tmp1, tmp2);//中间目的地不可以在障碍物上
 				
-				if(dis1>=0.1 && dis2 >=0.1)
+				if(dis1>=0.1 && dis2 >=0.1 && dis3 >= 0.1)
 					pedestrians.push_back(onePedestrian);
 
-			} while (dis1<0.1 || dis2<0.1);
-
-
+			} while (dis1<0.1 || dis2<0.1 || dis3<0.1);
 
 		}
 
@@ -132,15 +142,27 @@ void PedestrianSimulator::updatePositionAndVelocity()
 	for (int i = 0; i < pedestrians.size(); i++) {//判断行人有没有到达终点，如果到达，则删除
 		double dis1 = (pedestrians[i].curPosition.x - pedestrians[i].tarPostion.x)*(pedestrians[i].curPosition.x - pedestrians[i].tarPostion.x)
 			+ (pedestrians[i].curPosition.y - pedestrians[i].tarPostion.y)*(pedestrians[i].curPosition.y - pedestrians[i].tarPostion.y);
-		dis1 = sqrt(dis1);
+		dis1 = sqrt(dis1);//行人当前位置距离target位置的距离
 		double tmp1, tmp2;
 		double dis2 = sceneStructure.GetClosestObstacle(pedestrians[i].curPosition.x, pedestrians[i].curPosition.y, tmp1, tmp2);
-		if (dis1 < 1 || fabs(dis2) < 0.1)//如果行人走着走着走到障碍物上了，那就删掉他！
-		//if(dis1 < 1)
-		{
+		if (fabs(dis2) < 0.1){//如果行人走着走着走到障碍物上了，那就删掉他！
 			pedestrians.erase(pedestrians.begin() + i);
 			i--;
+			continue;
 		}
+		if (dis1 < 1) {//如果行人距离target位置很近了
+			if (pedestrians.at(i).endPosition.x >= 0) {//判断一下是不是终点，如果不是终点，则把当前的target点改为终点
+				pedestrians.at(i).tarPostion.x = pedestrians.at(i).endPosition.x;
+				pedestrians.at(i).tarPostion.y = pedestrians.at(i).endPosition.y;
+				pedestrians.at(i).endPosition.x = -1;//很蠢，如果访问过中间目的地了，就把endPosition置为负数
+			}
+			else {//如果是终点了，删掉行人
+				pedestrians.erase(pedestrians.begin() + i);
+				i--;
+				continue;
+			}
+		}
+
 		
 	}
 
@@ -189,8 +211,8 @@ void PedestrianSimulator::updateAcceleration()
 		Acceleration a2;//加速度第二项，即周围行人对当前行人的斥力
 		a2.ax = 0;
 		a2.ay = 0;
-		double Vab0 = 2.8;//这个参数论文里是2.1
-		double sigma = 0.5;//这个参数论文里是0.3
+		double Vab0 = 2.0;//这个参数论文里是2.1
+		double sigma = 0.3;//这个参数论文里是0.3
 		for (auto q : pedestrians) {
 
 			double disTwoPerson = (p.curPosition.x - q.curPosition.x)*(p.curPosition.x - q.curPosition.x) + (p.curPosition.y - q.curPosition.y)*(p.curPosition.y - q.curPosition.y);
@@ -253,7 +275,7 @@ void PedestrianSimulator::updateAcceleration()
 		double curAccPersonAndObst = sqrt(pow(a1.ax + a3.ax, 2) + pow(a1.ay + a3.ay, 2));//当前目的地引力与墙斥力向量和的大小，标量
 		double curAccPerson = sqrt(pow(a1.ax, 2) + pow(a1.ay, 2));//当前目的地对行人的引力大小，标量
 
-		if (curSpeed < p.tarSpeed*2 &&   curAccPersonAndObst< curAccPerson*0.8) {//如果行人速度低，且墙壁斥力抵消了大部分目的地引力
+		if (curSpeed < p.tarSpeed*2 &&   curAccPersonAndObst< curAccPerson*0.5) {//如果行人速度低，且墙壁斥力抵消了大部分目的地引力
 			double lenth = sqrt(pow(p.curSpeed.vx, 2) + pow(p.curSpeed.vy, 2));//
 			double curDirx = p.curSpeed.vx / lenth;//当前前进方向
 			double curDiry = p.curSpeed.vy / lenth;//当前前进方向，注意是单位向量
@@ -262,7 +284,7 @@ void PedestrianSimulator::updateAcceleration()
 			a1.ay -= horizonAcc   * curDiry;//先减掉目的地引力水平方向分量，现在目的地引力只有垂直于墙壁的分量了
 			a1.ax += curAccPerson * curDirx;
 			a1.ay += curAccPerson * curDiry;//现在，平行于墙壁的力的大小直接等于目的地引力大小了
-			//a3.ax = a3.ay = 0;//老子不要墙壁的斥力了！
+			a3.ax = a3.ay = 0;//老子不要墙壁的斥力了！
 		}
 
 		p.curAcc.ax = a1.ax + a2.ax + a3.ax;
@@ -435,6 +457,7 @@ void PedestrianSimulator::saveStateMap()
 	double maxL3 = 0;
 
 	cv::Mat colorStateMap = cv::Mat::zeros(StateMap.rows, StateMap.cols, CV_8UC3);//该mat保存的是彩色状态图
+	cv::Mat alpha = cv::Mat::zeros(cv::Size(colorStateMap.cols, colorStateMap.rows), CV_8UC1);//stateMap的alpha通道
 	for (int i = 0;i<StateMap.rows;i++)
 		for (int j = 0; j < StateMap.cols; j++) {
 			float L1 = StateMap.at<cv::Vec<float, 9>>(i, j)[0];//该栅格中向右走的人数
@@ -461,23 +484,47 @@ void PedestrianSimulator::saveStateMap()
 			colorStateMap.at<cv::Vec3b>(i, j)[0] = theta3;
 			colorStateMap.at<cv::Vec3b>(i, j)[1] = 255 - L3;
 			colorStateMap.at<cv::Vec3b>(i, j)[2] = 255;//饱和度都为255
+			
+			if(L3<20)
+				alpha.at<uchar>(i, j) = L3*12;//这里做的不好，以后需要再改
+			else
+				alpha.at<uchar>(i, j) = 255;
 		}
 	printf("Max people = %.2lf\n", maxL3);
 	
 	cv::cvtColor(colorStateMap, colorStateMap, cv::COLOR_HLS2BGR);
 	cv::imwrite(outputDir + "_color.jpg", colorStateMap);
 
-	double maxValue, minValue;
-	cv::minMaxIdx(channels[8], &minValue, &maxValue);
-	for (int i = 0; i < StateMap.rows; i++)
-		for (int j = 0; j < StateMap.cols; j++) {
-			//channels[8].at<float>(i, j) = channels[8].at<float>(i, j) / maxValue;
-			//channels[8].at<float>(i, j) = (1 - channels[8].at<float>(i, j))*255;
-			if (channels[8].at<float>(i, j) > 255)
-				channels[8].at<float>(i, j) = 255;
-			channels[8].at<float>(i, j) = 255 - channels[8].at<float>(i, j);
+	std::vector<cv::Mat> png;
+	cv::split(colorStateMap, png);
+	
+	//for (int i=0;i<colorStateMap.cols;i++)
+	//	for (int j = 0; j < colorStateMap.rows; j++) {
+	//		int b = png.at(0).at<uchar>(i, j);
+	//		int g = png.at(1).at<uchar>(i, j);
+	//		int r = png.at(2).at<uchar>(i, j);
+	//		int tmp = b + g + r;
+	//		tmp = tmp <= 255?tmp:255;
+	//		alpha.at<uchar>(i, j) = tmp;
+	//	}
+	
+	png.push_back(alpha);
+	cv::merge(png, colorStateMap);
+	cv::imwrite(outputDir + "_color.png", colorStateMap);//输出带有alpha通道的png图像，这样可以把stateMap投到卫星图上
 
-		}
+
+
+	//double maxValue, minValue;
+	//cv::minMaxIdx(channels[8], &minValue, &maxValue);
+	//for (int i = 0; i < StateMap.rows; i++)
+	//	for (int j = 0; j < StateMap.cols; j++) {
+	//		//channels[8].at<float>(i, j) = channels[8].at<float>(i, j) / maxValue;
+	//		//channels[8].at<float>(i, j) = (1 - channels[8].at<float>(i, j))*255;
+	//		if (channels[8].at<float>(i, j) > 255)
+	//			channels[8].at<float>(i, j) = 255;
+	//		channels[8].at<float>(i, j) = 255 - channels[8].at<float>(i, j);
+
+	//	}
 	//cv::imshow("test", channels[8]);
 	//cv::waitKey(0);
 	//cv::imwrite(outputDir + ".jpg", channels[8]);

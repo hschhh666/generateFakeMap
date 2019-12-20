@@ -33,6 +33,60 @@ PedestrianInfo::PedestrianInfo(Position cur, Position tar)
 
 }
 
+PedestrianInfo::PedestrianInfo(std::vector<Position> roadPoints_)
+{
+	Position cur;
+	Position tar;
+	cur.x = roadPoints_.at(0).x;//起始位置就是第一个点
+	cur.y = roadPoints_.at(0).y;
+	tar.x = roadPoints_.at(1).x;//最初的目标位置是第二个点。当然，如果总共就只有俩点的话那这个点也就是最终的点了。
+	tar.y = roadPoints_.at(1).y;
+
+	endPosition.x = endPosition.y = -10;//如果endPosition为负数的话，就表明只有起点和终点俩点，没有中间点
+
+	static std::random_device rd{};
+	static std::mt19937 gen{ rd() };
+
+	std::normal_distribution<> px{ cur.x,sigma_px };
+	initPosition.x = lastPosition.x = curPosition.x = px(gen);
+	std::normal_distribution<> py{ cur.y,sigma_py };
+	initPosition.y = lastPosition.y = curPosition.y = py(gen);
+
+
+	std::normal_distribution<> tx{ tar.x,sigma_px };
+	tarPostion.x = tx(gen);
+	std::normal_distribution<> ty{ tar.y,sigma_py };
+	tarPostion.y = ty(gen);
+
+	std::normal_distribution<> tarv{ 1.34,0.26 };//这个参数是从论文里抄的
+	//std::normal_distribution<> tarv{ 2.68,0.26 };
+	tarSpeed = tarv(gen);
+
+	curSpeed.vx = tarPostion.x - curPosition.x;
+	curSpeed.vy = tarPostion.y - curPosition.y;
+	double lenth = sqrt(curSpeed.vx*curSpeed.vx + curSpeed.vy*curSpeed.vy);
+	curSpeed.vx /= lenth;
+	curSpeed.vy /= lenth;
+	curSpeed.vx *= tarSpeed;
+	curSpeed.vy *= tarSpeed;
+
+	curAcc.ax = 0;
+	curAcc.ay = 0;
+
+	if (roadPoints_.size() > 2) {
+		endPosition.x = roadPoints_.at(2).x;//如果有仨点的话，最终最终目的地是第三个点
+		endPosition.y = roadPoints_.at(2).y;
+
+
+		//std::normal_distribution<> ex{endPosition.x,0 };
+		//std::normal_distribution<> ey{endPosition.y,0 };
+		//endPosition.x = ex(gen);
+		//endPosition.y = ey(gen);
+
+	}
+
+}
+
 
 
 void SceneStructure::InitScene(std::string filename, std::string satelliteFile)
@@ -59,7 +113,27 @@ void SceneStructure::InitScene(std::string filename, std::string satelliteFile)
 		p.y = y;
 		StartEndPositions.push_back(p);
 	}
+
+	int hiddenPositionsNum;
+	storage["hiddenPositionsNum"] >> hiddenPositionsNum;
+	for (int i = 0; i < hiddenPositionsNum; i++) {
+		int x, y;
+		storage["hiddenPosition" + std::to_string(i) + "x"] >> x;
+		storage["hiddenPosition" + std::to_string(i) + "y"] >> y;
+		Position p;
+		p.x = x;
+		p.y = y;
+		HiddenPositions.push_back(p);
+	}
+
+	storage["HiddenMatrix"] >> HiddenMatrix;
 	storage["structure"] >> scene;
+	//for (int i = 0; i < HiddenMatrix.cols; i++)
+	//{
+	//	for (int j = 0; j < HiddenMatrix.cols; j++)
+	//		std::cout << HiddenMatrix.at<double>(i, j) << " ";
+	//	std::cout << std::endl;
+	//}	
 
 	cv::Mat satelliteMap = cv::imread(satelliteFile);
 	if (satelliteMap.empty()) {
@@ -83,8 +157,21 @@ void SceneStructure::InitScene(std::string filename, std::string satelliteFile)
 		cv::circle(sceneState, cv::Point(StartEndPositions[i].x, StartEndPositions[i].y), 4, cv::Scalar(0, 0, 255), -1);
 		cv::putText(sceneState, std::to_string(i), cv::Point(StartEndPositions[i].x + 5, StartEndPositions[i].y + 5), 1, 1, cv::Scalar(0, 0, 0));
 	}
+
+	//for (int i = 0; i < hiddenPositionsNum; i++)
+	//{
+	//	cv::circle(sceneState, cv::Point(HiddenPositions[i].x, HiddenPositions[i].y), 4, cv::Scalar(0, 255, 0), -1);
+	//	cv::putText(sceneState, std::to_string(i), cv::Point(HiddenPositions[i].x + 5, HiddenPositions[i].y + 5), 1, 1, cv::Scalar(0, 0, 0));
+	//}
+
 	
 	for (auto &p : StartEndPositions) {//把各个拓扑点的坐标由图像坐标转换为全局坐标
+		int x = p.x;
+		int y = p.y;
+		CoordinateConventer(x, y, p.x, p.y);
+	}
+
+	for (auto &p : HiddenPositions) {//把各个拓扑点的坐标由图像坐标转换为全局坐标
 		int x = p.x;
 		int y = p.y;
 		CoordinateConventer(x, y, p.x, p.y);

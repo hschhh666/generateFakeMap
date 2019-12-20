@@ -27,11 +27,13 @@ class PedestrianInfo {
 public:
 	PedestrianInfo() {};
 	PedestrianInfo(Position cur, Position tar);
+	PedestrianInfo(std::vector<Position> roadPoints_);
 
 	Position curPosition;//当前位置
 	Position lastPosition;//上一时刻位置
 	Position initPosition;//初始时刻位置
 	Position tarPostion;//目标位置
+	Position endPosition;//历史遗留问题，为了尽快实现，就没改原来的变量名，直接取了这个名字。表示最终最终的目的地，是相较于中间目的地而言的。
 	Speed curSpeed;//当前速度
 	Acceleration curAcc;//当前加速度
 	double tarSpeed;//  m/s
@@ -45,7 +47,7 @@ private:
 };
 
 
-//这里定义场景的建筑物、尺寸、起点终点等
+//这里定义场景的建筑物、尺寸、起点终点中间目的地等
 class SceneStructure {
 
 public:
@@ -61,9 +63,11 @@ public:
 	double leftUpCornerX, leftUpCornerY;//图像左上角对应的真实世界中的全局坐标
 
 	cv::Mat sceneState;//把人也花在场景结构上了
+	cv::Mat HiddenMatrix;//中间目的地点，就是从i出发到j时，先要去HiddenMatirx[i][j]点
 
 	std::vector<Position> StartEndPositions;//meter 保存着所有的目标点
-	
+	std::vector<Position> HiddenPositions;//meter  保存着所有中间目的地点
+
 //private:
 	int imgSize;//pixel 地图的像素大小
 	double sceneSize;//meter 地图对应的实际物理环境大小

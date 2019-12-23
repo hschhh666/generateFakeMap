@@ -18,9 +18,9 @@ private:
 	void updatePositionAndVelocity();//更新行人的位置与速度，并判断行人是否已经到达目的地
 	void updateAcceleration();//更新行人的加速度
 	void updataStateMap();//更新状态地图
-	void showCurState();//可视化当前场景
-	void showStateMap();
-	void saveStateMap();
+	void showCurState();//可视化当前场景，就是把人画上去
+	void showStateMap();//可视化状态地图，不过这一步是在仿真结束后才可以做的
+	void saveStateMap();//保存状态地图
 
 
 	int totalFrames;//总共仿真的帧数

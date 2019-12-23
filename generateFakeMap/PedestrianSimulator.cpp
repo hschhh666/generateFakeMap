@@ -311,29 +311,36 @@ void PedestrianSimulator::updataStateMap()
 		theta += 22.5;
 		theta = theta - ((int)(theta / 360.0)) * 360;
 		int dir = theta / 45;
-		
-		//为了省事，stateMap的channel 0 用来记做向右走的人，channel 1 记向左走的人， channel 8 记总人数。即channel 0 + channel 1 = channel8。也就是说，剩下的channel暂时没用
-		if (p.tarPostion.x > p.initPosition.x)//向右走
-			dir = 0;
-		else
-			dir = 1;
 
+		double speed = sqrt(pow(p.curSpeed.vx, 2) + pow(p.curSpeed.vy, 2));
+		if (speed < 0.1)//速度小于某个阈值，则认为人没动，就不处理
+			continue;
+
+		//状态如何定义：状态定义为四个方向，上下左右，用四个通道来存储。
+		double dirX = p.curSpeed.vx / speed;//人在X方向上的分量
+		double dirY = p.curSpeed.vy / speed;//人在y方向上的分量
 		int kernelPixelSize = stateMapKernal.cols;
 		if (sceneStructure.CoordinateConventer(cx, cy, ix, iy)) {
 
-			for (int i = 0;i<kernelPixelSize;i++)
+			for (int i = 0; i < kernelPixelSize; i++)
 				for (int j = 0; j < kernelPixelSize; j++) {
 					float value = stateMapKernal.at<float>(i, j);
 					int tmp_y = i - (kernelPixelSize / 2);
 					int tmp_x = j - (kernelPixelSize / 2);
 					if (ix + tmp_x >= sceneStructure.imgSize || ix + tmp_x < 0 || iy + tmp_y >= sceneStructure.imgSize || iy + tmp_y < 0)
 						continue;
-					StateMap.at<cv::Vec<float, 9>>(cv::Point(ix + tmp_x, iy + tmp_y))[8] += value;//以人为中心，做高斯衰减
-					StateMap.at<cv::Vec<float, 9>>(cv::Point(ix + tmp_x, iy + tmp_y))[dir] += value;
+					if (dirX > 0)
+						StateMap.at<cv::Vec<float, 9>>(cv::Point(ix + tmp_x, iy + tmp_y))[0] += (dirX * value);//以人为中心，做高斯衰减
+					else
+						StateMap.at<cv::Vec<float, 9>>(cv::Point(ix + tmp_x, iy + tmp_y))[2] += ((-dirX) * value);
+					if (dirY > 0)
+						StateMap.at<cv::Vec<float, 9>>(cv::Point(ix + tmp_x, iy + tmp_y))[1] += (dirY * value);
+					else
+						StateMap.at<cv::Vec<float, 9>>(cv::Point(ix + tmp_x, iy + tmp_y))[3] += ((-dirY) * value);
+
+					StateMap.at<cv::Vec<float, 9>>(cv::Point(ix + tmp_x, iy + tmp_y))[8] += value;
 				}
 		}
-
-
 
 	}
 }
@@ -449,87 +456,145 @@ void PedestrianSimulator::saveStateMap()
 
 	storage << "stateMap" << channels[8];
 	storage << "toRight"  << channels[0];
-	storage << "toLeft"   << channels[1];
+	storage << "toUp"     << channels[1];
+	storage << "toLeft"   << channels[2];
+	storage << "toDown"   << channels[3];
 
 	storage.release();
 	printf("Write state map to %s\n", outputDir + ".yml");
 
-	double maxL3 = 0;
-
+	//以下为可视化部分
 	cv::Mat colorStateMap = cv::Mat::zeros(StateMap.rows, StateMap.cols, CV_8UC3);//该mat保存的是彩色状态图
-	cv::Mat alpha = cv::Mat::zeros(cv::Size(colorStateMap.cols, colorStateMap.rows), CV_8UC1);//stateMap的alpha通道
-	for (int i = 0;i<StateMap.rows;i++)
+	cv::Mat toRight = cv::Mat::zeros(StateMap.rows, StateMap.cols, CV_8UC3);//该mat保存的是右通道彩色状态图
+	cv::Mat toLeft = cv::Mat::zeros(StateMap.rows, StateMap.cols, CV_8UC3);//该mat保存的是左通道彩色状态图
+	cv::Mat toUp = cv::Mat::zeros(StateMap.rows, StateMap.cols, CV_8UC3);//该mat保存的是上通道彩色状态图
+	cv::Mat toDown = cv::Mat::zeros(StateMap.rows, StateMap.cols, CV_8UC3);//该mat保存的是下通道彩色状态图
+
+	cv::Mat alpha(cv::Size(colorStateMap.cols, colorStateMap.rows), CV_8UC1, cv::Scalar(255));//stateMap的alpha通道
+
+	double peopleNum, toLeftPeopleNum, toRightPeopleNum, toUpPeopleNum, toDownPeopleNum;
+	double visThreshold = 70;//可视化的阈值，当人数超过该阈值时，赋予相同的颜色
+	double singleVisThreshold = visThreshold / 2;//单个通道的可视化阈值
+	for (int i = 0; i < StateMap.rows; i++)
 		for (int j = 0; j < StateMap.cols; j++) {
-			float L1 = StateMap.at<cv::Vec<float, 9>>(i, j)[0];//该栅格中向右走的人数
-			float L2 =  StateMap.at<cv::Vec<float, 9>>(i, j)[1];//该栅格中向左走的人数
-			float theta1 = 0;//向右走为红色
-			float theta2  = (85/255.0)*180.0;//向左走为绿色。在windows定义的HSL色彩模式中，h=85是绿色。windows定义的hsl中h的范围是[0,255]，opencv定义的hls中h的范围是[0,180]，这里做了一个从windows到opencv色彩定义的转换
-			theta1 = theta1 * CV_PI / 180;
-			theta2 = theta2 * CV_PI / 180;
-			float L3 = sqrt(L1 * L1 + L2 * L2 + 2 * L1 * L2 * cos(theta1 - theta2));//这一步计算的是中间变量
-			if (L3 < 1e-3) {
-				colorStateMap.at<cv::Vec3b>(i, j)[0] = 0;
-				colorStateMap.at<cv::Vec3b>(i, j)[1] = 255;
-				colorStateMap.at<cv::Vec3b>(i, j)[2] = 0;
-				continue;
-			}
-			float theta3 = acos((L1*cos(theta1) + L2 * cos(theta2)) / L3);//使用opencv的hls颜色模式为行人方向赋值，其中令饱和度都为255。定义向右走为红色，向左走为绿色，颜色的亮度由人数决定，人越多亮度越接近128，人越少亮度越接近255。人流交汇处的颜色由红色/绿色混合而成，其色调（向量方向）等于两股人流对应颜色的向量和的方向，亮度等于两股人流的亮度之和
-			theta3 = theta3 * 180 / CV_PI;//计算该栅格的颜色，对应opencv中hls颜色模式的h（色调）
-			L3 = L1 + L2;//计算该栅格的亮度，对应opencv中hls颜色模式的l（亮度）。人越多亮度越接近128，人越少亮度越接近255
-			
-			if (L3 > maxL3)
-				maxL3 = L3;
+			peopleNum = channels[8].at<float>(i, j);
+			toRightPeopleNum = channels[0].at<float>(i, j);
+			toUpPeopleNum = channels[1].at<float>(i, j);
+			toLeftPeopleNum = channels[2].at<float>(i, j);
+			toDownPeopleNum = channels[3].at<float>(i, j);
 
-			L3 = L3 > 128 ? 128 : L3;//亮度为255时对应白色了，亮度为0时对应黑色了，亮度为128时是由白变黑的中间点
-			colorStateMap.at<cv::Vec3b>(i, j)[0] = theta3;
-			colorStateMap.at<cv::Vec3b>(i, j)[1] = 255 - L3;
-			colorStateMap.at<cv::Vec3b>(i, j)[2] = 255;//饱和度都为255
-			
-			if(L3<20)
-				alpha.at<uchar>(i, j) = L3*12;//这里做的不好，以后需要再改
-			else
-				alpha.at<uchar>(i, j) = 255;
+			peopleNum = peopleNum / (float(timeLong) / 60.0);//per minutes
+			peopleNum = peopleNum > visThreshold ? visThreshold : peopleNum;
+			peopleNum = peopleNum * 255 / visThreshold;
+
+			toRightPeopleNum = toRightPeopleNum / (float(timeLong) / 60.0);//per minutes
+			toRightPeopleNum = toRightPeopleNum > singleVisThreshold ? singleVisThreshold : toRightPeopleNum;
+			toRightPeopleNum = toRightPeopleNum * 255 / singleVisThreshold;
+
+			toUpPeopleNum = toUpPeopleNum / (float(timeLong) / 60.0);//per minutes
+			toUpPeopleNum = toUpPeopleNum > singleVisThreshold ? singleVisThreshold : toUpPeopleNum;
+			toUpPeopleNum = toUpPeopleNum * 255 / singleVisThreshold;
+
+			toLeftPeopleNum = toLeftPeopleNum / (float(timeLong) / 60.0);//per minutes
+			toLeftPeopleNum = toLeftPeopleNum > singleVisThreshold ? singleVisThreshold : toLeftPeopleNum;
+			toLeftPeopleNum = toLeftPeopleNum * 255 / singleVisThreshold;
+
+			toDownPeopleNum = toDownPeopleNum / (float(timeLong) / 60.0);//per minutes
+			toDownPeopleNum = toDownPeopleNum > singleVisThreshold ? singleVisThreshold : toDownPeopleNum;
+			toDownPeopleNum = toDownPeopleNum * 255 / singleVisThreshold;
+
+			colorStateMap.at<cv::Vec3b>(i, j)[0] = 255 - peopleNum;//总人流量的图为黑色
+			colorStateMap.at<cv::Vec3b>(i, j)[1] = 255 - peopleNum;
+			colorStateMap.at<cv::Vec3b>(i, j)[2] = 255 - peopleNum;
+
+			toRight.at<cv::Vec3b>(i, j)[0] = 255;//向右的图为蓝色
+			toRight.at<cv::Vec3b>(i, j)[1] = 255 - toRightPeopleNum;
+			toRight.at<cv::Vec3b>(i, j)[2] = 255 - toRightPeopleNum;
+
+			toUp.at<cv::Vec3b>(i, j)[0] = 255 - toUpPeopleNum;//向上的图为橙色
+			toUp.at<cv::Vec3b>(i, j)[1] = (255 - 92)*(255 - toUpPeopleNum) / 255 + 92;
+			toUp.at<cv::Vec3b>(i, j)[2] = 255;
+
+			toLeft.at<cv::Vec3b>(i, j)[0] = 255 - toLeftPeopleNum;//向左的图为红色
+			toLeft.at<cv::Vec3b>(i, j)[1] = 255 - toLeftPeopleNum;
+			toLeft.at<cv::Vec3b>(i, j)[2] = 255;
+
+			toDown.at<cv::Vec3b>(i, j)[0] = 255;//向下的图为紫色
+			toDown.at<cv::Vec3b>(i, j)[1] = 255 - toDownPeopleNum;
+			toDown.at<cv::Vec3b>(i, j)[2] = (255-158)*(255 - toDownPeopleNum)/255 + 158;
+
 		}
-	printf("Max people = %.2lf\n", maxL3);
-	
-	cv::cvtColor(colorStateMap, colorStateMap, cv::COLOR_HLS2BGR);
-	cv::imwrite(outputDir + "_color.jpg", colorStateMap);
 
-	std::vector<cv::Mat> png;
-	cv::split(colorStateMap, png);
-	
-	//for (int i=0;i<colorStateMap.cols;i++)
-	//	for (int j = 0; j < colorStateMap.rows; j++) {
-	//		int b = png.at(0).at<uchar>(i, j);
-	//		int g = png.at(1).at<uchar>(i, j);
-	//		int r = png.at(2).at<uchar>(i, j);
-	//		int tmp = b + g + r;
-	//		tmp = tmp <= 255?tmp:255;
-	//		alpha.at<uchar>(i, j) = tmp;
-	//	}
-	
-	png.push_back(alpha);
-	cv::merge(png, colorStateMap);
-	cv::imwrite(outputDir + "_color.png", colorStateMap);//输出带有alpha通道的png图像，这样可以把stateMap投到卫星图上
+	cv::Mat visualMap;
+	visualMap = cv::Mat::zeros(StateMap.rows, StateMap.cols * 5, CV_8UC3);
+	cv::Mat ROI[5];
 
+	for (int i = 0; i < 5; i++)
+		ROI[i] = visualMap(cv::Rect(i*StateMap.rows, 0, StateMap.cols, StateMap.rows));
 
+	double x0 = 50;//箭头的中点
+	double y0 = 50;
+	double arrowLenth = 50;
 
-	//double maxValue, minValue;
-	//cv::minMaxIdx(channels[8], &minValue, &maxValue);
-	//for (int i = 0; i < StateMap.rows; i++)
-	//	for (int j = 0; j < StateMap.cols; j++) {
-	//		//channels[8].at<float>(i, j) = channels[8].at<float>(i, j) / maxValue;
-	//		//channels[8].at<float>(i, j) = (1 - channels[8].at<float>(i, j))*255;
-	//		if (channels[8].at<float>(i, j) > 255)
-	//			channels[8].at<float>(i, j) = 255;
-	//		channels[8].at<float>(i, j) = 255 - channels[8].at<float>(i, j);
+	cv::arrowedLine(toRight, cv::Point(x0 - arrowLenth / 2, y0), cv::Point(x0 + arrowLenth / 2, y0), cv::Scalar(255, 0, 0), 2);
+	cv::arrowedLine(toLeft, cv::Point(x0 + arrowLenth / 2, y0), cv::Point(x0 - arrowLenth / 2, y0), cv::Scalar(0, 0, 255), 2);
+	cv::arrowedLine(toDown, cv::Point(x0, y0 - arrowLenth / 2), cv::Point(x0, y0 + arrowLenth / 2), cv::Scalar(255, 0, 158), 2);
+	cv::arrowedLine(toUp, cv::Point(x0, y0 + arrowLenth / 2), cv::Point(x0, y0 - arrowLenth / 2), cv::Scalar(0, 92, 255), 2);
 
-	//	}
-	//cv::imshow("test", channels[8]);
-	//cv::waitKey(0);
-	//cv::imwrite(outputDir + ".jpg", channels[8]);
-	//printf("Write state map to %s\n", outputDir + ".jpg");
-	
+	toRight.copyTo(ROI[4]);
+	toLeft.copyTo(ROI[3]);
+	colorStateMap.copyTo(ROI[2]);
+	toDown.copyTo(ROI[1]);
+	toUp.copyTo(ROI[0]);
+
+	int lineWidth = 2;
+	cv::Scalar color(0);
+	cv::line(visualMap, cv::Point(StateMap.cols, 0), cv::Point(StateMap.cols, StateMap.rows), color, lineWidth);
+	cv::line(visualMap, cv::Point(StateMap.cols * 2, 0), cv::Point(StateMap.cols * 2, StateMap.rows), color, lineWidth);
+	cv::line(visualMap, cv::Point(StateMap.cols * 3, 0), cv::Point(StateMap.cols * 3, StateMap.rows), color, lineWidth);
+	cv::line(visualMap, cv::Point(StateMap.cols * 4, 0), cv::Point(StateMap.cols * 4, StateMap.rows), color, lineWidth);
+	cv::resize(visualMap, visualMap, cv::Size(1250, 250));
+
+	cv::imwrite(outputDir + "_vis.png", visualMap);
+	printf("Write state map vis to %s\n", outputDir + "_vis.png");
+
+	//cv::Mat tmp(cv::Size(colorStateMap.cols, colorStateMap.rows), CV_8UC1);
+	//channels[8].convertTo(tmp, CV_8UC1);
+	//cv::applyColorMap(tmp, colorStateMap,cv::COLORMAP_BONE);
+	//cv::cvtColor(colorStateMap, colorStateMap, cv::COLOR_HLS2BGR);
+	//cv::imwrite(outputDir + "_color.jpg", colorStateMap);
+
+	//添加png的alpha通道
+	//std::vector<cv::Mat> png;
+	//cv::split(colorStateMap, png);
+	//png.push_back(alpha);
+	//cv::merge(png, colorStateMap);
+
+	//png.clear();
+	//cv::split(toRight, png);
+	//png.push_back(alpha);
+	//cv::merge(png, toRight);
+
+	//png.clear();
+	//cv::split(toUp, png);
+	//png.push_back(alpha);
+	//cv::merge(png, toUp);
+
+	//png.clear();
+	//cv::split(toLeft, png);
+	//png.push_back(alpha);
+	//cv::merge(png, toLeft);
+
+	//png.clear();
+	//cv::split(toDown, png);
+	//png.push_back(alpha);
+	//cv::merge(png, toDown);
+
+	//cv::imwrite(outputDir + "_color.png", colorStateMap);//输出带有alpha通道的png图像，这样可以把stateMap投到卫星图上
+	//cv::imwrite(outputDir + "toLeft.png", toLeft);
+	//cv::imwrite(outputDir + "toRight.png", toRight);
+	//cv::imwrite(outputDir + "toUp.png", toUp);
+	//cv::imwrite(outputDir + "toDown.png", toDown);
 
 }
 

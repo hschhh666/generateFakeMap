@@ -40,9 +40,9 @@ stateMapDir = D:\Research\IV2020MapPrediction\Code\MapPrediction\GenerateFakeMap
 
 ## 配置文件说明
 1. [input] 指程序运行时需要从外部读入的数据，总共有三个，分别为`sceneFile`、`satelliteFile`和`pedestrainMatrix`。其中
-    1. `sceneFile`由另一个程序`generateScene`生成，描述了场景的出入口和障碍物，为opencv的yml文件，其数据结构参看`generateScene`源代码；
-    1. `satelliteFile`为png文件，是自己从谷歌地图上截图截出来的，只是为了可视化使用。需要注意卫星图png与场景图结构图yml的大小是一样的，就相当于yml文件是卫星图png的mask，卫星图中的障碍物、出口就在yml中呈现出来。
-    1. `pedestrainMatrix` 非常重要，**它直接决定了场景的动态状态**，它本质上是一个nxn的矩阵，储存为opencv的yml数据格式。假设某个场景一共有6个出入口，那么该文件就是6x6的矩阵，其中第`i`行`j`列描述的是**平均每分钟**从位置`i`走向位置`j`的人数。该文件的生成方式就随意了，自己写个python脚本就行。
+    1. `sceneFile`，场景结构文件，由另一个程序[generateScene](https://github.com/hschhh666/generateScene)生成，描述了场景的出入口和障碍物，为opencv的yml文件，其数据结构参看`generateScene`源代码。我已经做好了东门/东南门的[场景结构](https://github.com/hschhh666/pedestrianSimulatorDataFolder)了。
+    1. `satelliteFile`，卫星地图，为png文件，是自己从谷歌地图上截图截出来的，只是为了可视化使用。需要注意卫星图png与场景图结构图yml的大小是一样的，就相当于yml文件是卫星图png的mask，卫星图中的障碍物、出口就在yml中呈现出来。我也做好东门/东南门的[卫星地图](https://github.com/hschhh666/pedestrianSimulatorDataFolder)了
+    1. `pedestrainMatrix` 非常重要，**它直接决定了场景的动态状态**，它本质上是一个nxn的矩阵，储存为opencv的yml数据格式，示例在[这里](https://github.com/hschhh666/pedestrianSimulatorDataFolder)。假设某个场景一共有6个出入口，那么该文件就是6x6的矩阵，其中第`i`行`j`列描述的是**平均每分钟**从位置`i`走向位置`j`的人数。该文件的生成方式就随意了，自己写个python脚本就行，论文中我通过`PN`和`FD`来生成该矩阵，用于生成该矩阵的代码在[这里](https://github.com/hschhh666/PedestrainSimulatorPythonScript)可以找到。
 
 2. [param] 程序运行时需要的一些内部参数。
     1. `visualRate`，如注释，不再赘述
@@ -58,10 +58,10 @@ stateMapDir = D:\Research\IV2020MapPrediction\Code\MapPrediction\GenerateFakeMap
 
 以东南门为例，我在仿真时的方法是这样的：
 1. 在google map上截图出东南门的卫星图，需要注意图片的size（即图像长宽）和pixel size（每个像素代表多少米）
-1. 利用`generateScene`，配合卫星地图，标出该场景的mask，即障碍无区和出入口，生成yml文件，描述了场景的结构
+1. 利用[generateScene](https://github.com/hschhh666/generateScene)，配合[卫星地图](https://github.com/hschhh666/pedestrianSimulatorDataFolder)，标出该场景的mask，即障碍无区和出入口，生成[yml文件](https://github.com/hschhh666/pedestrianSimulatorDataFolder)，描述了场景的结构
 1. 生成`n`个`pedestrainMatrix`，其中第`i`个`pedestrainMatrix`表示的就是第`i`分钟东南门的行人进出状况。其实吧，整个程序的核心控制数据就是`pedestrainMatrix`，`pedestrainMatrix`在时间上的变化，反映到仿真结果上就是动态状态在时间上发生变化。至于`pedestrainMatrix`如何生成那就很灵活了。
 1. 生成n个配置文件`simulator_j.ini`，这n个配置文件的区别就在于`pedestrainMatrix`。运行n次`./generateFakeMap.exe simulator_j.ini`，得到n个在不同`pedestrainMatrix`下的状态地图。
 
 # 其他说明
-1. 我已经做好了东门和东南门的卫星图及结构图`satelliteFile`、`sceneFile`，直接用就行，不用再生成了。主要就是要思考如何生成`pedestrainMatrix`。在论文里，我是用两个变量`PN`和`FD`控制`pedestrainMatrix`的生成的，当然更复杂的生成方式会有更贴合实际的动态状态。
+1. 我已经做好了东门和东南门的卫星图及结构图[satelliteFile、sceneFile](https://github.com/hschhh666/pedestrianSimulatorDataFolder)，直接用就行，不用再生成了。主要就是要思考如何生成`pedestrainMatrix`。在论文里，我是用两个变量`PN`和`FD`控制`pedestrainMatrix`的生成的，当然更复杂的生成方式会有更贴合实际的动态状态。
 2. 程序输出的yml文件（即场景的动态状态）是用于后续深度学习计算的，而png文件只是对yml文件的可视化，完全不影响深度学习运算，是给人看的。这版程序中使用的可视化方式是对四个方向分别可视化，再可视化整体的人流量，但是这种可视化方式并没有被采用到论文的最终版中。论文最终版的可视化方式是把不同方向的人流量按不同颜色可视化到同一张图上，这是通过一个名叫`visStateMap.py`的python脚本实现的，该脚本输入为yml文件，输入为可视化的png文件。我实在懒得再改这个工程里的可视化代码了，python转C++好烦人，所以就这么用吧。生成yml后，再用`visStateMap.py`生成一下可视化的png。
